@@ -1,12 +1,14 @@
 package org.figuramc.figura.lua.api.data;
 
+import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaString;
 import org.luaj.vm2.LuaTable;
 import org.luaj.vm2.LuaValue;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.*;
 import java.util.Base64;
 
 public interface FiguraReadable {
@@ -26,6 +28,14 @@ public interface FiguraReadable {
         }
         return arr;
     }
+
+    private static String stringFromBytesByCharset(Charset charset, byte[] bytes) throws CharacterCodingException {
+        CharsetDecoder decoder = charset.newDecoder();
+        ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+        CharBuffer charBuffer = decoder.decode(byteBuffer);
+        return new String(charBuffer.array());
+    }
+
     default int readShort() {
         byte[] bytes = readNBytes(this, 2);
         short v = 0;
@@ -113,7 +123,11 @@ public interface FiguraReadable {
             default -> StandardCharsets.UTF_8;
         };
         byte[] strBuf = readNBytes(this, length);
-        return new String(strBuf, charset);
+        try {
+            return stringFromBytesByCharset(charset, strBuf);
+        } catch (CharacterCodingException e) {
+            throw new LuaError(e);
+        }
     }
 
     default String readBase64(Integer length) {
