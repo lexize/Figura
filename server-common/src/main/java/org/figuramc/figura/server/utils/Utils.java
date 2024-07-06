@@ -2,6 +2,7 @@ package org.figuramc.figura.server.utils;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.UUID;
 
 public class Utils {
@@ -114,5 +115,9 @@ public class Utils {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static byte[] copyBytes(byte[] source) {
+        return Arrays.copyOf(source, source.length);
     }
 }

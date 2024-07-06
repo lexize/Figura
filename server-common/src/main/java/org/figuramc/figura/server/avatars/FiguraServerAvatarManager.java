@@ -1,145 +1,32 @@
 package org.figuramc.figura.server.avatars;
 
 import org.figuramc.figura.server.FiguraServer;
-import org.figuramc.figura.server.events.*;
+import org.figuramc.figura.server.events.Events;
+import org.figuramc.figura.server.events.StartLoadingAvatarEvent;
+import org.figuramc.figura.server.events.StartLoadingMetadataEvent;
+import org.figuramc.figura.server.exceptions.HashNotMatchingException;
 import org.figuramc.figura.server.packets.AvatarDataPacket;
 import org.figuramc.figura.server.packets.s2c.S2CInitializeAvatarStreamPacket;
-import org.figuramc.figura.server.utils.Pair;
+import org.figuramc.figura.server.utils.Either;
 import org.figuramc.figura.server.utils.Utils;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
+import static org.figuramc.figura.server.utils.Utils.copyBytes;
+
 public final class FiguraServerAvatarManager {
-    private final HashMap<byte[], AvatarData> data = new HashMap<>();
-    private final HashMap<byte[], CompletableFuture<AvatarData>> loadingAvatarData = new HashMap<>();
+    private final HashMap<byte[], AvatarHandle> avatars = new HashMap<>();
 
-    private final HashMap<byte[], AvatarMetadata> metadata = new HashMap<>();
-    private final HashMap<byte[], CompletableFuture<AvatarMetadata>> loadingMetadata = new HashMap<>();
-
-    private final HashMap<byte[], CompletableFuture<Pair<AvatarData, AvatarMetadata>>> loadingAvatars = new HashMap<>();
-
-    private final ArrayList<AvatarOutcomingStream> openedOutcomingStreams = new ArrayList<>();
-
-    private final HashMap<byte[], ArrayList<Awaiting>> awaiting = new HashMap<>();
-
-    public void openOutcomingStream(UUID receiver, byte[] hash, int streamId) {
-        if (data.containsKey(hash)) {
-            if (!isOutcomingStreamOpen(receiver, hash))
-                openedOutcomingStreams.add(new AvatarOutcomingStream(receiver, data.get(hash), streamId,
-                    hash, getEHashForAvatar(receiver, hash).join()));
-        }
-        else {
-            loadingAvatars.computeIfAbsent(hash, this::loadAvatar);
-            var awaitingClients = getAwaiting(hash);
-            var awaitingStream = new AwaitingOutcomingStream(receiver, hash, streamId);
-            if (!awaitingClients.contains(awaitingStream)) awaitingClients.add(awaitingStream);
-        }
-    }
-
-    private boolean isOutcomingStreamOpen(UUID receiver, byte[] hash) {
-        int hashCode = Objects.hash(receiver, Arrays.hashCode(hash));
-        return openedOutcomingStreams.stream().anyMatch(s -> s.hashCode() == hashCode);
-    }
-
-    private ArrayList<Awaiting> getAwaiting(byte[] hash) {
-        return awaiting.computeIfAbsent(hash, k -> new ArrayList<>());
-    }
-
-    private CompletableFuture<AvatarData> startLoadingAvatarData(byte[] hash) {
-        if (loadingAvatarData.containsKey(hash)) return loadingAvatarData.get(hash);
-        if (data.containsKey(hash)) CompletableFuture.completedFuture(data.get(hash));
-        var event = Events.call(new StartLoadingAvatarEvent(hash)); /* Handling an event for case if some of the
-        plugins/mods has custom avatar loading implementation, for example loading from DB.
-        P.S. Figura (both client and server side) will still check if hash of output data and requested hash matches,
-        even if it is loading avatar with default way. If they don't, streams will be closed, and awaiting users will be
-        notified about server's attempt to replace avatar. */
-        if (event.returned()) return event.returnValue().thenApply(AvatarData::new);
-        Path avatarPath = FiguraServer.getInstance().getAvatar(hash);
-        var future =  CompletableFuture.supplyAsync(() -> {
-            File f = avatarPath.toFile();
-            try (FileInputStream fis = new FileInputStream(f)) {
-                return fis.readAllBytes();
-            }
-            catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }).thenApply(AvatarData::new);
-        loadingAvatarData.put(hash, future);
-        return future;
-    }
-
-    private CompletableFuture<AvatarMetadata> startLoadingAvatarMetadata(byte[] hash) {
-        if (loadingMetadata.containsKey(hash)) return loadingMetadata.get(hash);
-        if (metadata.containsKey(hash)) return CompletableFuture.completedFuture(metadata.get(hash));
-
-        return CompletableFuture.completedFuture(null);
-    }
-
-    public CompletableFuture<Pair<AvatarData, AvatarMetadata>> loadAvatar(byte[] hash) {
-        return startLoadingAvatarData(hash).thenCombineAsync(startLoadingAvatarMetadata(hash), Pair::new);
+    public void sendAvatar(byte[] hash, UUID receiver, int streamId) {
+        avatars.computeIfAbsent(copyBytes(hash), AvatarHandle::new).sendTo(receiver, streamId);
     }
 
     public void tick() {
-        // Finishing loading for avatars
-        ArrayList<byte[]> loadingAvatarsToRemove = new ArrayList<>();
-        for (var avatarEntry: loadingAvatarData.entrySet()) {
-            var cf = avatarEntry.getValue();
-            if (cf.isDone()) {
-                var key = avatarEntry.getKey();
-                var awaitingStreams = awaiting.get(key);
-                if (cf.isCompletedExceptionally()) {
-                    Events.call(new AvatarLoadingExceptionEvent( key, cf.exceptionNow(),
-                            awaitingStreams.stream().map(Awaiting::receiver).toList()
-                    )); // Invoking an event in case if avatar loading failed.
-                }
-                else if (!cf.isCancelled()) {
-                    AvatarData avatarData = cf.join();
-                    byte[] dataHash = Utils.getHash(avatarData.data);
-                    if (Arrays.equals(dataHash, key)) {
-                        this.data.put(key, avatarData);
-                    }
-                    else Events.call(new InvalidAvatarHashEvent(key, dataHash,
-                            awaitingStreams.stream().map(Awaiting::receiver).toList()
-                    )); // Invoking an event in case if avatar hash is wrong.
-
-                }
-                awaiting.remove(avatarEntry.getKey());
-                loadingAvatarsToRemove.add(avatarEntry.getKey());
-            }
-        }
-        for (byte[] key: loadingAvatarsToRemove) {
-            loadingAvatarData.remove(key);
-        }
-
-        // Ticking avatars data GC counter
-        for (AvatarData data : data.values()) {
-            data.tick();
-        }
-        data.entrySet().removeIf(this::canAvatarDataBeRemoved);
-
-        // Ticking streams, and closing finished ones
-        for (AvatarOutcomingStream stream: openedOutcomingStreams) {
-            stream.tick();
-        }
-        openedOutcomingStreams.removeIf(AvatarOutcomingStream::canBeClosed);
-    }
-
-    private boolean canAvatarDataBeRemoved(Map.Entry<byte[], AvatarData> entry) {
-        var cfg = FiguraServer.getInstance().config();
-        if (entry.getValue().timeWithoutFetching > cfg.garbageCollectionTicks()) {
-            var event = Events.call(new AvatarDataGCEvent(entry.getKey()));
-            return !event.isCancelled();
-        }
-        return false;
-    }
-
-    private CompletableFuture<byte[]> getEHashForAvatar(UUID receiver, byte[] hash) {
-        return CompletableFuture.completedFuture(new byte[0]);
+        avatars.values().forEach(AvatarHandle::tick);
     }
 
     public static class AvatarData {
@@ -160,9 +47,22 @@ public final class FiguraServerAvatarManager {
         }
     }
     public static class AvatarMetadata {
-        private final HashMap<UUID, byte[]> owners = new HashMap<>();
-        private final ArrayList<UUID> equippedOn = new ArrayList<>();
+        private final HashMap<UUID, byte[]> owners;
         private boolean cleanupProtection = false;
+
+        /**
+         * Creates empty metadata
+         */
+        public AvatarMetadata() {
+            this.owners = new HashMap<>();
+        }
+
+        /**
+         * Creates metadata with avatar owners
+         */
+        public AvatarMetadata(HashMap<UUID, byte[]> owners) {
+            this.owners = owners;
+        }
 
         /**
          * Map of users who owns this avatar.
@@ -171,14 +71,6 @@ public final class FiguraServerAvatarManager {
          */
         public HashMap<UUID, byte[]> owners() {
             return owners;
-        }
-
-        /**
-         * List of users who has this avatar equipped.
-         * @return List of UUID
-         */
-        public ArrayList<UUID> equippedOn() {
-            return equippedOn;
         }
 
         /**
@@ -195,6 +87,14 @@ public final class FiguraServerAvatarManager {
         public AvatarMetadata setCleanupProtection(boolean cleanupProtection) {
             this.cleanupProtection = cleanupProtection;
             return this;
+        }
+
+        public byte[] getEHash(UUID owner) {
+            return owners.get(owner);
+        }
+
+        private static AvatarMetadata fromJsonBytes(byte[] bytes) {
+            return null; // TODO
         }
     }
 
@@ -248,11 +148,11 @@ public final class FiguraServerAvatarManager {
 
     private abstract class Awaiting {
         protected final UUID receiver;
-        protected final byte[] hash;
+        protected final AvatarHandle parent;
 
-        private Awaiting(UUID receiver, byte[] hash) {
+        private Awaiting(UUID receiver, AvatarHandle parent) {
             this.receiver = receiver;
-            this.hash = hash;
+            this.parent = parent;
         }
 
         public UUID receiver() {
@@ -265,28 +165,33 @@ public final class FiguraServerAvatarManager {
         public boolean equals(Object o) {
             if (this == o) return true;
             if (!(o instanceof Awaiting awaiting)) return false;
-            return Objects.equals(receiver, awaiting.receiver) && Objects.deepEquals(hash, awaiting.hash);
+            return Objects.equals(receiver, awaiting.receiver) && Objects.equals(parent, awaiting.parent);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(receiver, Arrays.hashCode(hash));
+            return Objects.hash(receiver, parent);
         }
+
+        protected abstract boolean acceptDataException(Exception error);
+        protected abstract boolean acceptMetadataException(Exception error);
     }
 
     private class AwaitingOutcomingStream extends Awaiting {
         private final int streamId;
 
-        private AwaitingOutcomingStream(UUID receiver, byte[] avatarHash, int streamId) {
-            super(receiver, avatarHash);
+        private AwaitingOutcomingStream(UUID receiver, AvatarHandle parent, int streamId) {
+            super(receiver, parent);
             this.streamId = streamId;
         }
 
         @Override
         protected boolean finish() {
-            if (data.containsKey(hash) && metadata.containsKey(hash)) {
-                openedOutcomingStreams.add(new AvatarOutcomingStream(receiver, data.get(hash), streamId,
-                        hash, getEHashForAvatar(receiver, hash).join()));
+            var data = parent.getAvatarData();
+            var metadata = parent.getMetadata();
+            if (data.isA() && metadata.isA()) {
+                parent.streams.add(new AvatarOutcomingStream(receiver, data.a(), streamId,
+                        parent.hash, metadata.a().getEHash(receiver)));
                 return true;
             }
             return false;
@@ -303,6 +208,115 @@ public final class FiguraServerAvatarManager {
         @Override
         public int hashCode() {
             return Objects.hash(super.hashCode(), streamId);
+        }
+
+        @Override
+        protected boolean acceptDataException(Exception error) {
+            // Implement notifying user about an error in loading an avatar
+            return true;
+        }
+
+        @Override
+        protected boolean acceptMetadataException(Exception error) {
+            // Implement notifying user about an error in loading avatar metadata
+            return true;
+        }
+    }
+
+    private class AvatarHandle {
+        private final byte[] hash;
+        private Either<AvatarData, CompletableFuture<AvatarData>> data;
+        private Either<AvatarMetadata, CompletableFuture<AvatarMetadata>> metadata;
+        private final ArrayList<Awaiting> awaiting = new ArrayList<>();
+        private final ArrayList<AvatarOutcomingStream> streams = new ArrayList<>();
+
+        private AvatarHandle(byte[] hash) {
+            this.hash = hash;
+        }
+
+        private void sendTo(UUID receiver, int streamId) {
+            awaiting.add(new AwaitingOutcomingStream(receiver, this, streamId));
+        }
+
+        private Either<AvatarData, CompletableFuture<AvatarData>> getAvatarData() {
+            if (data == null) {
+                data = Either.newB(startLoadingAvatar());
+            }
+            return data;
+        }
+
+        private CompletableFuture<AvatarData> startLoadingAvatar() {
+            var event = Events.call(new StartLoadingAvatarEvent(copyBytes(hash)));
+            if (event.returned()) event.returnValue().thenApplyAsync(this::checkAndFinishLoadingAvatar);
+
+            return CompletableFuture.supplyAsync(() -> {
+                var inst = FiguraServer.getInstance();
+                Path avatarFile = inst.getAvatar(hash);
+                try {
+                    FileInputStream fis = new FileInputStream(avatarFile.toFile());
+                    byte[] data = fis.readAllBytes();
+                    fis.close();
+                    return data;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }).thenApply(this::checkAndFinishLoadingAvatar);
+        }
+
+        private AvatarData checkAndFinishLoadingAvatar(byte[] data) {
+            byte[] hash = Utils.getHash(data);
+            if (!Arrays.equals(hash, this.hash)) throw new HashNotMatchingException(copyBytes(this.hash), hash);
+            return new AvatarData(data);
+        }
+
+        private Either<AvatarMetadata, CompletableFuture<AvatarMetadata>> getMetadata() {
+            if (metadata == null) {
+                metadata = Either.newB(startLoadingMetadata());
+            }
+            return metadata;
+        }
+
+        private CompletableFuture<AvatarMetadata> startLoadingMetadata() {
+            var event = Events.call(new StartLoadingMetadataEvent(copyBytes(hash)));
+            if (event.returned()) return event.returnValue();
+
+            return CompletableFuture.supplyAsync(() -> {
+                var inst = FiguraServer.getInstance();
+                Path avatarFile = inst.getAvatarMetadata(hash);
+                try {
+                    FileInputStream fis = new FileInputStream(avatarFile.toFile());
+                    byte[] data = fis.readAllBytes();
+                    fis.close();
+                    return data;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }).thenApply(AvatarMetadata::fromJsonBytes);
+        }
+
+        private void tick() {
+            var data = getAvatarData();
+            var metadata = getMetadata();
+
+            if (data.isB() && data.b().isDone()) {
+                try {
+                    this.data = Either.newA(data.b().join());
+                } catch (Exception e) {
+                    awaiting.removeIf(a -> a.acceptDataException(e));
+                }
+            }
+
+            if (metadata.isB() && metadata.b().isDone()) {
+                try {
+                    this.metadata = Either.newA(metadata.b().join());
+                } catch (Exception e) {
+                    awaiting.removeIf(a -> a.acceptMetadataException(e));
+                }
+            }
+
+            awaiting.removeIf(Awaiting::finish);
+            data.a().tick();
+            streams.forEach(AvatarOutcomingStream::tick);
         }
     }
 }
