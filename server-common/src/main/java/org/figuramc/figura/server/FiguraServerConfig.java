@@ -41,7 +41,7 @@ public final class FiguraServerConfig {
         return garbageCollectionTicks;
     }
 
-    public int maxOutcomingChunkSize() {
+    public int s2cChunkSize() {
         return maxOutcomingChunkSize;
     }
 }

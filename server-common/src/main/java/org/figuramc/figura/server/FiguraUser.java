@@ -14,18 +14,20 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class FiguraUser {
     private final UUID player;
-    private boolean avatars;
     private boolean pings;
+    private boolean avatars;
+    private int s2cChunkSize;
     private final PingCounter pingCounter = new PingCounter();
     private final BitSet prideBadges;
     private final HashMap<String, byte[]> equippedAvatars;
 
     private final HashMap<String, byte[]> ownedAvatars;
 
-    public FiguraUser(UUID player, boolean allowAvatars, boolean allowPings, BitSet prideBadges, HashMap<String, byte[]> equippedAvatars, HashMap<String, byte[]> ownedAvatars) {
+    public FiguraUser(UUID player, boolean allowPings, boolean allowAvatars, int s2cChunkSize, BitSet prideBadges, HashMap<String, byte[]> equippedAvatars, HashMap<String, byte[]> ownedAvatars) {
         this.player = player;
-        this.avatars = allowAvatars;
         this.pings = allowPings;
+        this.avatars = allowAvatars;
+        this.s2cChunkSize = s2cChunkSize;
         this.prideBadges = prideBadges;
         this.equippedAvatars = equippedAvatars;
         this.ownedAvatars = ownedAvatars;
@@ -37,6 +39,10 @@ public final class FiguraUser {
 
     public boolean avatarsAllowed() {
         return avatars;
+    }
+
+    public int s2cChunkSize() {
+        return s2cChunkSize;
     }
 
     public boolean pingsAllowed() {
@@ -90,18 +96,18 @@ public final class FiguraUser {
         }
     }
 
-    public static FiguraUser load(UUID player, boolean pings, boolean avatars, Path playerFile) {
+    public static FiguraUser load(UUID player, boolean pings, boolean avatars, int s2cChunkSize, Path playerFile) {
         try (FileInputStream fis = new FileInputStream(playerFile.toFile())) {
             InputStreamByteBuf buf = new InputStreamByteBuf(fis);
-            return load(player, pings, avatars, buf);
+            return load(player, pings, avatars, s2cChunkSize, buf);
         } catch (FileNotFoundException e) {
-            return new FiguraUser(player, avatars, pings, new BitSet(), new HashMap<>(), new HashMap<>());
+            return new FiguraUser(player, pings, avatars, s2cChunkSize, new BitSet(), new HashMap<>(), new HashMap<>());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static FiguraUser load(UUID player, boolean pings, boolean avatars, IFriendlyByteBuf buf) {
+    public static FiguraUser load(UUID player, boolean pings, boolean avatars, int s2cChunkSize, IFriendlyByteBuf buf) {
         BitSet prideBadges = BitSet.valueOf(buf.readByteArray(256));
         int equippedAvatarsCount = buf.readVarInt();
         HashMap<String, byte[]> equippedAvatars = new HashMap<>();
@@ -117,7 +123,7 @@ public final class FiguraUser {
             byte[] hash = buf.readHash();
             ownedAvatars.put(id, hash);
         }
-        return new FiguraUser(player, avatars, pings, prideBadges, equippedAvatars, ownedAvatars);
+        return new FiguraUser(player, pings, avatars, s2cChunkSize, prideBadges, equippedAvatars, ownedAvatars);
     }
 
     public byte[] findEHash(byte[] hash) {

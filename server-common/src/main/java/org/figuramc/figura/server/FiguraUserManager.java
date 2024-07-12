@@ -31,15 +31,15 @@ public final class FiguraUserManager {
         ));
     }
 
-    public FiguraUser authorisePlayer(UUID player, boolean allowPings, boolean allowAvatars) {
-        return users.computeIfAbsent(player, (k) -> loadPlayerData(k, allowPings, allowAvatars));
+    public FiguraUser authorisePlayer(UUID player, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
+        return users.computeIfAbsent(player, (k) -> loadPlayerData(k, allowPings, allowAvatars, s2cChunkSize));
     }
 
-    private FiguraUser loadPlayerData(UUID player, boolean allowPings, boolean allowAvatars) {
+    private FiguraUser loadPlayerData(UUID player, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
         LoadPlayerDataEvent playerDataEvent = Events.call(new LoadPlayerDataEvent(player));
         if (playerDataEvent.returned()) return playerDataEvent.returnValue();
         Path dataFile = parent.getUserdataFile(player);
-        return FiguraUser.load(player, allowPings, allowAvatars, dataFile);
+        return FiguraUser.load(player, allowPings, allowAvatars, s2cChunkSize, dataFile);
     }
 
     public void onPlayerLeave(UUID player) {

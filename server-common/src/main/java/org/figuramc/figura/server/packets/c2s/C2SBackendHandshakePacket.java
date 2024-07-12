@@ -12,15 +12,18 @@ public class C2SBackendHandshakePacket implements Packet {
 
     private final boolean pings;
     private final boolean avatars;
+    private final int incomingChunkSize;
 
-    public C2SBackendHandshakePacket(boolean pings, boolean avatars) {
+    public C2SBackendHandshakePacket(boolean pings, boolean avatars, int incomingChunkSize) {
         this.pings = pings;
         this.avatars = avatars;
+        this.incomingChunkSize = incomingChunkSize;
     }
 
     public C2SBackendHandshakePacket(IFriendlyByteBuf byteBuf) {
         this.pings = byteBuf.readByte() != 0;
         this.avatars = byteBuf.readByte() != 0;
+        this.incomingChunkSize = this.avatars ? byteBuf.readInt() :  0;
     }
 
     /**
@@ -39,10 +42,21 @@ public class C2SBackendHandshakePacket implements Packet {
         return avatars;
     }
 
+    /**
+     * Max incoming chunk size allowed by client, in case if it allows backend work with avatars.
+     * @return Max incoming chunk size
+     */
+    public int maxAvatarChunkSize() {
+        return incomingChunkSize;
+    }
+
     @Override
     public void write(IFriendlyByteBuf byteBuf) {
         byteBuf.writeByte(pings ? 1 : 0);
         byteBuf.writeByte(avatars ? 1 : 0);
+        if (avatars) {
+            byteBuf.writeInt(incomingChunkSize);
+        }
     }
 
     @Override
