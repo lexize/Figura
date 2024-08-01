@@ -1,6 +1,7 @@
-package org.figuramc.figura.server.events;
+package org.figuramc.figura.server.events.avatars;
 
-import java.util.ArrayList;
+import org.figuramc.figura.server.events.Event;
+
 import java.util.List;
 import java.util.UUID;
 

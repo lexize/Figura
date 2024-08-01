@@ -1,9 +1,11 @@
 package org.figuramc.figura.server;
 
 import org.figuramc.figura.server.events.Events;
-import org.figuramc.figura.server.events.OutcomingPacketEvent;
+import org.figuramc.figura.server.events.HandshakeEvent;
+import org.figuramc.figura.server.events.packets.OutcomingPacketEvent;
 import org.figuramc.figura.server.packets.Packet;
-import org.figuramc.figura.server.packets.PacketHandler;
+import org.figuramc.figura.server.packets.handlers.c2s.C2SPacketHandler;
+import org.figuramc.figura.server.packets.s2c.S2CBackendHandshakePacket;
 import org.figuramc.figura.server.utils.Identifier;
 import org.figuramc.figura.server.utils.Utils;
 
@@ -25,7 +27,7 @@ public abstract class FiguraServer {
 
     public abstract Path getFiguraFolder();
 
-    public abstract void registerHandler(Identifier packetId, PacketHandler<?> handler);
+    public abstract void registerHandler(Identifier packetId, C2SPacketHandler<?> handler);
     public abstract void unregisterHandler(Identifier packetId);
 
     public Path getUsersFolder() {
@@ -53,8 +55,22 @@ public abstract class FiguraServer {
     }
 
     public final void close() {
-
         INSTANCE = null;
+    }
+
+    public final void sendHandshake(UUID receiver) {
+        var event = Events.call(new HandshakeEvent(receiver));
+        if (!event.isCancelled()) {
+            userManager.expect(receiver);
+            sendPacket(receiver, new S2CBackendHandshakePacket(
+                    config.pings(),
+                    config.pingsRateLimit(),
+                    config.pingsSizeLimit(),
+                    config.avatars(),
+                    config.avatarSizeLimit(),
+                    config.avatarsCountLimit()
+            ));
+        }
     }
 
     public FiguraServerConfig config() {

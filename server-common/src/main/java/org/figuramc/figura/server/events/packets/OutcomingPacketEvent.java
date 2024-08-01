@@ -1,5 +1,6 @@
-package org.figuramc.figura.server.events;
+package org.figuramc.figura.server.events.packets;
 
+import org.figuramc.figura.server.events.CancellableEvent;
 import org.figuramc.figura.server.packets.Packet;
 
 import java.util.UUID;

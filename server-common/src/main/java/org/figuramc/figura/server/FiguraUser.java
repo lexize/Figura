@@ -130,6 +130,12 @@ public final class FiguraUser {
         return null;
     }
 
+    public void update(boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
+        this.pings = allowPings;
+        this.avatars = allowAvatars;
+        this.s2cChunkSize = s2cChunkSize;
+    }
+
     private static class PingCounter {
         private int bytesSent; // Amount of total bytes sent in last 20 ticks
         private int pingsSent; // Amount of pings sent in last 20 ticks

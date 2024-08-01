@@ -1,4 +1,6 @@
-package org.figuramc.figura.server.events;
+package org.figuramc.figura.server.events.avatars;
+
+import org.figuramc.figura.server.events.ReturnableEvent;
 
 import java.util.concurrent.CompletableFuture;
 

@@ -1,16 +1,18 @@
 package org.figuramc.figura.server;
 
 import org.figuramc.figura.server.events.Events;
-import org.figuramc.figura.server.events.LoadPlayerDataEvent;
-import org.figuramc.figura.server.packets.s2c.S2CBackendHandshakePacket;
+import org.figuramc.figura.server.events.users.LoadPlayerDataEvent;
+import org.figuramc.figura.server.packets.s2c.S2CConnected;
 
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.UUID;
 
 public final class FiguraUserManager {
     private final FiguraServer parent;
     private final HashMap<UUID, FiguraUser> users = new HashMap<>();
+    private final LinkedList<UUID> expectedUsers = new LinkedList<>();
 
     public FiguraUserManager(FiguraServer parent) {
         this.parent = parent;
@@ -21,19 +23,27 @@ public final class FiguraUserManager {
     }
 
     public void onPlayerJoin(UUID player) {
-        parent.sendPacket(player, new S2CBackendHandshakePacket(
-                parent.config().pings(),
-                parent.config().pingsRateLimit(),
-                parent.config().pingsSizeLimit(),
-                parent.config().avatars(),
-                parent.config().avatarSizeLimit(),
-                parent.config().avatarsCountLimit()
-        ));
+        parent.sendHandshake(player);
     }
 
-    public FiguraUser authorisePlayer(UUID player, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
-        return users.computeIfAbsent(player, (k) -> loadPlayerData(k, allowPings, allowAvatars, s2cChunkSize));
+    public void updateOrAuthPlayer(UUID player, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
+        users.compute(player, (k, p) -> {
+            if (p != null) {
+                p.update(allowPings, allowAvatars, s2cChunkSize);
+                return p;
+            } else if (expectedUsers.contains(player)) {
+                FiguraUser user = loadPlayerData(player, allowPings, allowAvatars, s2cChunkSize);
+                expectedUsers.remove(player);
+                return user;
+            }
+            return null;
+        });
+        users.computeIfPresent(player, (k, p) -> {
+            p.sendPacket(new S2CConnected());
+            return p;
+        });
     }
+
 
     private FiguraUser loadPlayerData(UUID player, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
         LoadPlayerDataEvent playerDataEvent = Events.call(new LoadPlayerDataEvent(player));
@@ -54,5 +64,11 @@ public final class FiguraUserManager {
             pl.save(parent.getUserdataFile(pl.player()));
         }
         users.clear();
+    }
+
+    public void expect(UUID user) {
+        if (!expectedUsers.contains(user)) {
+            expectedUsers.add(user);
+        }
     }
 }

@@ -1,6 +1,7 @@
-package org.figuramc.figura.server.events;
+package org.figuramc.figura.server.events.users;
 
 import org.figuramc.figura.server.FiguraUser;
+import org.figuramc.figura.server.events.ReturnableEvent;
 
 import java.util.UUID;
 

@@ -2,8 +2,8 @@ package org.figuramc.figura.server.avatars;
 
 import org.figuramc.figura.server.FiguraServer;
 import org.figuramc.figura.server.events.Events;
-import org.figuramc.figura.server.events.StartLoadingAvatarEvent;
-import org.figuramc.figura.server.events.StartLoadingMetadataEvent;
+import org.figuramc.figura.server.events.avatars.StartLoadingAvatarEvent;
+import org.figuramc.figura.server.events.avatars.StartLoadingMetadataEvent;
 import org.figuramc.figura.server.exceptions.HashNotMatchingException;
 import org.figuramc.figura.server.packets.AvatarDataPacket;
 import org.figuramc.figura.server.packets.s2c.S2CInitializeAvatarStreamPacket;
