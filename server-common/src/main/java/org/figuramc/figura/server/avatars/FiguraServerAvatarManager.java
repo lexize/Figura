@@ -19,7 +19,12 @@ import java.util.concurrent.CompletableFuture;
 import static org.figuramc.figura.server.utils.Utils.copyBytes;
 
 public final class FiguraServerAvatarManager {
+    private final FiguraServer parent;
     private final HashMap<byte[], AvatarHandle> avatars = new HashMap<>();
+
+    public FiguraServerAvatarManager(FiguraServer parent) {
+        this.parent = parent;
+    }
 
     public void sendAvatar(byte[] hash, UUID receiver, int streamId) {
         avatars.computeIfAbsent(copyBytes(hash), AvatarHandle::new).sendTo(receiver, streamId);

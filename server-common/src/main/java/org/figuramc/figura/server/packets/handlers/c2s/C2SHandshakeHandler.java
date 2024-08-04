@@ -20,6 +20,6 @@ public class C2SHandshakeHandler implements C2SPacketHandler<C2SBackendHandshake
 
     @Override
     public void handle(UUID sender, C2SBackendHandshakePacket packet) {
-        parent.userManager().updateOrAuthPlayer(sender, packet.pings(), packet.avatars(), packet.maxAvatarChunkSize());
+        parent.userManager().updateOrAuthPlayer(sender, false, packet.pings(), packet.avatars(), packet.maxAvatarChunkSize());
     }
 }

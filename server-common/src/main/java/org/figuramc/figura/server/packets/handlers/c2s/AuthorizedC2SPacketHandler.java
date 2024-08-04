@@ -7,7 +7,7 @@ import org.figuramc.figura.server.packets.Packet;
 import java.util.UUID;
 
 public abstract class AuthorizedC2SPacketHandler<P extends Packet> implements C2SPacketHandler<P> {
-    private final FiguraServer parent;
+    protected final FiguraServer parent;
 
     protected AuthorizedC2SPacketHandler(FiguraServer parent) {
         this.parent = parent;
@@ -16,7 +16,7 @@ public abstract class AuthorizedC2SPacketHandler<P extends Packet> implements C2
     @Override
     public final void handle(UUID sender, P packet) {
         FiguraUser user = parent.userManager().getUser(sender);
-        if (user == null) return;
+        if (user == null || user.offline()) return;
         handle(user, packet);
     }
 

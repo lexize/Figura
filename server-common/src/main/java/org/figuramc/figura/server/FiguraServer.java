@@ -1,5 +1,6 @@
 package org.figuramc.figura.server;
 
+import org.figuramc.figura.server.avatars.FiguraServerAvatarManager;
 import org.figuramc.figura.server.events.Events;
 import org.figuramc.figura.server.events.HandshakeEvent;
 import org.figuramc.figura.server.events.packets.OutcomingPacketEvent;
@@ -14,8 +15,10 @@ import java.util.UUID;
 
 public abstract class FiguraServer {
     private static FiguraServer INSTANCE;
-    private FiguraUserManager userManager;
+    private final FiguraUserManager userManager = new FiguraUserManager(this);
+    private final FiguraServerAvatarManager avatarManager = new FiguraServerAvatarManager(this);
     private FiguraServerConfig config;
+    private final DeferredPacketsQueue deferredPacketsQueue = new DeferredPacketsQueue(this);
     protected FiguraServer() {
         if (INSTANCE != null) throw new IllegalStateException("Can't create more than one instance of FiguraServer");
         INSTANCE = this;
@@ -58,6 +61,11 @@ public abstract class FiguraServer {
         INSTANCE = null;
     }
 
+    protected final void tick() {
+        deferredPacketsQueue.tick();
+        avatarManager.tick();
+    }
+
     public final void sendHandshake(UUID receiver) {
         var event = Events.call(new HandshakeEvent(receiver));
         if (!event.isCancelled()) {
@@ -90,4 +98,8 @@ public abstract class FiguraServer {
     }
 
     protected abstract void sendPacketInternal(UUID receiver, Packet packet);
+
+    public FiguraServerAvatarManager avatarManager() {
+        return avatarManager;
+    }
 }

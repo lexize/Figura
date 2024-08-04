@@ -27,6 +27,10 @@ public class C2SFetchUserdataPacket implements Packet {
         byteBuf.writeUUID(target);
     }
 
+    public UUID target() {
+        return target;
+    }
+
     @Override
     public Identifier getId() {
         return PACKET_ID;

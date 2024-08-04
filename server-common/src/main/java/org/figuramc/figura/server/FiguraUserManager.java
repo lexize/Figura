@@ -8,7 +8,9 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
+// TODO: Make FiguraUserManager also use CompletedFutures
 public final class FiguraUserManager {
     private final FiguraServer parent;
     private final HashMap<UUID, FiguraUser> users = new HashMap<>();
@@ -22,34 +24,38 @@ public final class FiguraUserManager {
         return users.get(playerUUID);
     }
 
+    public CompletableFuture<FiguraUser> getOfflineUser(UUID playerUUID) {
+        return null; // TODO
+    }
+
     public void onPlayerJoin(UUID player) {
         parent.sendHandshake(player);
     }
 
-    public void updateOrAuthPlayer(UUID player, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
+    public FiguraUser updateOrAuthPlayer(UUID player, boolean offline, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
         users.compute(player, (k, p) -> {
             if (p != null) {
                 p.update(allowPings, allowAvatars, s2cChunkSize);
                 return p;
             } else if (expectedUsers.contains(player)) {
-                FiguraUser user = loadPlayerData(player, allowPings, allowAvatars, s2cChunkSize);
+                FiguraUser user = loadPlayerData(player, offline, allowPings, allowAvatars, s2cChunkSize);
                 expectedUsers.remove(player);
                 return user;
             }
             return null;
         });
-        users.computeIfPresent(player, (k, p) -> {
-            p.sendPacket(new S2CConnected());
+        return users.computeIfPresent(player, (k, p) -> {
+            if (!p.offline()) p.sendPacket(new S2CConnected());
             return p;
         });
     }
 
 
-    private FiguraUser loadPlayerData(UUID player, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
+    private FiguraUser loadPlayerData(UUID player, boolean offline, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
         LoadPlayerDataEvent playerDataEvent = Events.call(new LoadPlayerDataEvent(player));
         if (playerDataEvent.returned()) return playerDataEvent.returnValue();
         Path dataFile = parent.getUserdataFile(player);
-        return FiguraUser.load(player, allowPings, allowAvatars, s2cChunkSize, dataFile);
+        return FiguraUser.load(player, offline, allowPings, allowAvatars, s2cChunkSize, dataFile);
     }
 
     public void onPlayerLeave(UUID player) {
