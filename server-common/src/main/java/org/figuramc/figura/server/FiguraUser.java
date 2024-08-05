@@ -1,7 +1,6 @@
 package org.figuramc.figura.server;
 
 import org.figuramc.figura.server.packets.Packet;
-import org.figuramc.figura.server.packets.s2c.S2CUserdataPacket;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.InputStreamByteBuf;
 import org.figuramc.figura.server.utils.OutputStreamByteBuf;
@@ -14,7 +13,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class FiguraUser {
     private final UUID player;
-    private boolean offline;
+    private boolean online;
     private boolean pings;
     private boolean avatars;
     private int s2cChunkSize;
@@ -24,9 +23,9 @@ public final class FiguraUser {
 
     private final HashMap<String, byte[]> ownedAvatars;
 
-    public FiguraUser(UUID player, boolean offline, boolean allowPings, boolean allowAvatars, int s2cChunkSize, BitSet prideBadges, HashMap<String, byte[]> equippedAvatars, HashMap<String, byte[]> ownedAvatars) {
+    public FiguraUser(UUID player, boolean online, boolean allowPings, boolean allowAvatars, int s2cChunkSize, BitSet prideBadges, HashMap<String, byte[]> equippedAvatars, HashMap<String, byte[]> ownedAvatars) {
         this.player = player;
-        this.offline = offline;
+        this.online = online;
         this.pings = allowPings;
         this.avatars = allowAvatars;
         this.s2cChunkSize = s2cChunkSize;
@@ -39,8 +38,12 @@ public final class FiguraUser {
         return player;
     }
 
+    public boolean online() {
+        return online;
+    }
+
     public boolean offline() {
-        return offline;
+        return !online;
     }
 
     public boolean avatarsAllowed() {
@@ -102,18 +105,18 @@ public final class FiguraUser {
         }
     }
 
-    public static FiguraUser load(UUID player, boolean offline, boolean pings, boolean avatars, int s2cChunkSize, Path playerFile) {
+    public static FiguraUser load(UUID player, Path playerFile) {
         try (FileInputStream fis = new FileInputStream(playerFile.toFile())) {
             InputStreamByteBuf buf = new InputStreamByteBuf(fis);
-            return load(player, offline, pings, avatars, s2cChunkSize, buf);
+            return load(player, buf);
         } catch (FileNotFoundException e) {
-            return new FiguraUser(player, offline, pings, avatars, s2cChunkSize, new BitSet(), new HashMap<>(), new HashMap<>());
+            return new FiguraUser(player, true, false, false, 0, new BitSet(), new HashMap<>(), new HashMap<>());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static FiguraUser load(UUID player, boolean offline, boolean pings, boolean avatars, int s2cChunkSize, IFriendlyByteBuf buf) {
+    public static FiguraUser load(UUID player, IFriendlyByteBuf buf) {
         BitSet prideBadges = BitSet.valueOf(buf.readByteArray(256));
         int equippedAvatarsCount = buf.readVarInt();
         HashMap<String, byte[]> equippedAvatars = new HashMap<>();
@@ -129,7 +132,7 @@ public final class FiguraUser {
             byte[] hash = buf.readHash();
             ownedAvatars.put(id, hash);
         }
-        return new FiguraUser(player, offline, pings, avatars, s2cChunkSize, prideBadges, equippedAvatars, ownedAvatars);
+        return new FiguraUser(player, false, false, false, 0, prideBadges, equippedAvatars, ownedAvatars);
     }
 
     public byte[] findEHash(byte[] hash) {
@@ -143,7 +146,11 @@ public final class FiguraUser {
     }
 
     public void setOnline() {
-        offline = false;
+        online = true;
+    }
+
+    public void setOffline() {
+        online = false;
     }
 
     private static class PingCounter {

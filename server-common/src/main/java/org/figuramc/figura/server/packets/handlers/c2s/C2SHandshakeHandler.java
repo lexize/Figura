@@ -1,6 +1,7 @@
 package org.figuramc.figura.server.packets.handlers.c2s;
 
 import org.figuramc.figura.server.FiguraServer;
+import org.figuramc.figura.server.FiguraUserManager;
 import org.figuramc.figura.server.packets.c2s.C2SBackendHandshakePacket;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 
@@ -20,6 +21,8 @@ public class C2SHandshakeHandler implements C2SPacketHandler<C2SBackendHandshake
 
     @Override
     public void handle(UUID sender, C2SBackendHandshakePacket packet) {
-        parent.userManager().updateOrAuthPlayer(sender, false, packet.pings(), packet.avatars(), packet.maxAvatarChunkSize());
+        FiguraUserManager manager = parent.userManager();
+        if (!manager.isExpected(sender)) return;
+        manager.setupOnlinePlayer(sender, packet.pings(), packet.avatars(), packet.maxAvatarChunkSize());
     }
 }

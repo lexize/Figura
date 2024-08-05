@@ -2,7 +2,6 @@ package org.figuramc.figura.server;
 
 import org.figuramc.figura.server.events.Events;
 import org.figuramc.figura.server.events.users.LoadPlayerDataEvent;
-import org.figuramc.figura.server.packets.s2c.S2CConnected;
 
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -20,48 +19,38 @@ public final class FiguraUserManager {
         this.parent = parent;
     }
 
-    public FiguraUser getUser(UUID playerUUID) {
+    public FiguraUser getUserOrNull(UUID playerUUID) {
         return users.get(playerUUID);
     }
 
-    public CompletableFuture<FiguraUser> getOfflineUser(UUID playerUUID) {
-        return null; // TODO
-    }
-
-    public void onPlayerJoin(UUID player) {
+    public void onUserJoin(UUID player) {
         parent.sendHandshake(player);
     }
 
-    public FiguraUser updateOrAuthPlayer(UUID player, boolean offline, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
-        users.compute(player, (k, p) -> {
-            if (p != null) {
-                p.update(allowPings, allowAvatars, s2cChunkSize);
-                return p;
-            } else if (expectedUsers.contains(player)) {
-                FiguraUser user = loadPlayerData(player, offline, allowPings, allowAvatars, s2cChunkSize);
-                expectedUsers.remove(player);
-                return user;
-            }
-            return null;
-        });
-        return users.computeIfPresent(player, (k, p) -> {
-            if (!p.offline()) p.sendPacket(new S2CConnected());
-            return p;
-        });
+    public FiguraUser getUser(UUID player) {
+        return users.computeIfAbsent(player, (p) -> loadPlayerData(player));
+    }
+
+    public void setupOnlinePlayer(UUID uuid, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
+        FiguraUser user = getUser(uuid);
+        user.setOnline();
+        user.update(allowPings, allowAvatars, s2cChunkSize);
+        expectedUsers.remove(uuid); // This is called either way just to remove it in case if it was first time initialization
     }
 
 
-    private FiguraUser loadPlayerData(UUID player, boolean offline, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
+    private FiguraUser loadPlayerData(UUID player) {
         LoadPlayerDataEvent playerDataEvent = Events.call(new LoadPlayerDataEvent(player));
         if (playerDataEvent.returned()) return playerDataEvent.returnValue();
         Path dataFile = parent.getUserdataFile(player);
-        return FiguraUser.load(player, offline, allowPings, allowAvatars, s2cChunkSize, dataFile);
+        return FiguraUser.load(player, dataFile);
     }
 
-    public void onPlayerLeave(UUID player) {
+    public void onUserLeave(UUID player) {
         users.computeIfPresent(player, (uuid, pl) -> {
             pl.save(parent.getUserdataFile(pl.player()));
-            return null;
+            pl.setOffline();
+            return pl;
         });
     }
 
@@ -76,5 +65,9 @@ public final class FiguraUserManager {
         if (!expectedUsers.contains(user)) {
             expectedUsers.add(user);
         }
+    }
+
+    public boolean isExpected(UUID user) {
+        return expectedUsers.contains(user);
     }
 }

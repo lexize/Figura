@@ -3,6 +3,7 @@ package org.figuramc.figura.server.packets.handlers.c2s;
 import org.figuramc.figura.server.FiguraServer;
 import org.figuramc.figura.server.FiguraUser;
 import org.figuramc.figura.server.packets.c2s.C2SFetchUserdataPacket;
+import org.figuramc.figura.server.packets.s2c.S2CUserdataPacket;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 
 public class C2SFetchUserdataPacketHandler extends AuthorizedC2SPacketHandler<C2SFetchUserdataPacket> {
@@ -13,7 +14,8 @@ public class C2SFetchUserdataPacketHandler extends AuthorizedC2SPacketHandler<C2
 
     @Override
     protected void handle(FiguraUser sender, C2SFetchUserdataPacket packet) {
-        // TODO: Make a deferred packet that sends a userdata when it exists
+        FiguraUser user = parent.userManager().getUser(packet.target());
+        // TODO
     }
 
     @Override

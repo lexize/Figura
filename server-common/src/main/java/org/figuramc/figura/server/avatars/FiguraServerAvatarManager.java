@@ -121,7 +121,7 @@ public final class FiguraServerAvatarManager {
 
         private int getChunkSize() {
             var inst = FiguraServer.getInstance();
-            var user = inst.userManager().getUser(receiver);
+            var user = inst.userManager().getUserOrNull(receiver);
             int serverLimit = inst.config().s2cChunkSize();
             int maxServerLimit = serverLimit <= 0 ? AvatarDataPacket.MAX_CHUNK_SIZE : serverLimit;
             int clientLimit = user.s2cChunkSize();
