@@ -27,7 +27,17 @@ public final class FiguraServerAvatarManager {
     }
 
     public void sendAvatar(byte[] hash, UUID receiver, int streamId) {
-        avatars.computeIfAbsent(copyBytes(hash), AvatarHandle::new).sendTo(receiver, streamId);
+        getAvatarHandle(hash).sendTo(receiver, streamId);
+    }
+
+    private AvatarHandle getAvatarHandle(byte[] hash) {
+        return avatars.computeIfAbsent(copyBytes(hash), AvatarHandle::new);
+    }
+
+    public CompletableFuture<AvatarMetadata> getAvatarMetadata(byte[] hash) {
+        var either = getAvatarHandle(hash).getMetadata();
+        if (either.isA()) return CompletableFuture.completedFuture(either.a());
+        return either.b();
     }
 
     public void tick() {
@@ -121,7 +131,7 @@ public final class FiguraServerAvatarManager {
 
         private int getChunkSize() {
             var inst = FiguraServer.getInstance();
-            var user = inst.userManager().getUserOrNull(receiver);
+            var user = inst.userManager().getUserOrNull(receiver).join();
             int serverLimit = inst.config().s2cChunkSize();
             int maxServerLimit = serverLimit <= 0 ? AvatarDataPacket.MAX_CHUNK_SIZE : serverLimit;
             int clientLimit = user.s2cChunkSize();

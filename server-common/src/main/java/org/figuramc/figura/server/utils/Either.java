@@ -1,10 +1,10 @@
 package org.figuramc.figura.server.utils;
 
 public class Either<A, B> {
-    private final Object value;
-    private final boolean b;
+    private Object value;
+    private boolean b;
 
-    private Either(Object value, boolean isB) {
+    protected Either(Object value, boolean isB) {
         this.value = value;
         b = isB;
     }
@@ -29,6 +29,16 @@ public class Either<A, B> {
     @SuppressWarnings("unchecked")
     public B b() {
         return b ? (B) value : null;
+    }
+
+    public void setA(A value) {
+        this.value = value;
+        b = false;
+    }
+
+    public void setB(B value) {
+        this.value = value;
+        b = true;
     }
 
     public static <A, B> Either<A, B> newA(A value) {

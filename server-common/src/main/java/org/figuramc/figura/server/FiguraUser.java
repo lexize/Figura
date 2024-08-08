@@ -34,7 +34,7 @@ public final class FiguraUser {
         this.ownedAvatars = ownedAvatars;
     }
 
-    public UUID player() {
+    public UUID uuid() {
         return player;
     }
 

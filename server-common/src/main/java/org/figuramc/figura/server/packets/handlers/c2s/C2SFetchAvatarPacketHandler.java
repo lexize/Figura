@@ -19,7 +19,7 @@ public class C2SFetchAvatarPacketHandler extends AuthorizedC2SPacketHandler<C2SF
         if (!Events.call(new AvatarFetchEvent(
                 Utils.copyBytes(hash)
         )).isCancelled()) {
-            parent.avatarManager().sendAvatar(Utils.copyBytes(hash), sender.player(), packet.streamId());
+            parent.avatarManager().sendAvatar(Utils.copyBytes(hash), sender.uuid(), packet.streamId());
         }
     }
 

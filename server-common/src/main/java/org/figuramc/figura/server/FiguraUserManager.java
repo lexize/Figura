@@ -2,6 +2,8 @@ package org.figuramc.figura.server;
 
 import org.figuramc.figura.server.events.Events;
 import org.figuramc.figura.server.events.users.LoadPlayerDataEvent;
+import org.figuramc.figura.server.events.users.UserLoadingExceptionEvent;
+import org.figuramc.figura.server.utils.Either;
 
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -12,51 +14,84 @@ import java.util.concurrent.CompletableFuture;
 // TODO: Make FiguraUserManager also use CompletedFutures
 public final class FiguraUserManager {
     private final FiguraServer parent;
-    private final HashMap<UUID, FiguraUser> users = new HashMap<>();
+    private final HashMap<UUID, Either<FiguraUser, FutureHandle>> users = new HashMap<>();
     private final LinkedList<UUID> expectedUsers = new LinkedList<>();
 
     public FiguraUserManager(FiguraServer parent) {
         this.parent = parent;
     }
 
-    public FiguraUser getUserOrNull(UUID playerUUID) {
-        return users.get(playerUUID);
+    public CompletableFuture<FiguraUser> getUserOrNull(UUID playerUUID) {
+        var either = users.get(playerUUID);
+        if (either != null) return wrapHandle(either);
+        return null;
     }
 
     public void onUserJoin(UUID player) {
         parent.sendHandshake(player);
     }
 
-    public FiguraUser getUser(UUID player) {
-        return users.computeIfAbsent(player, (p) -> loadPlayerData(player));
+    public CompletableFuture<FiguraUser> getUser(UUID player) {
+        return wrapHandle(users.computeIfAbsent(player, (p) -> Either.newB(
+                new FutureHandle(player, startLoadingPlayerData(player)))
+        ));
     }
 
-    public void setupOnlinePlayer(UUID uuid, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
-        FiguraUser user = getUser(uuid);
-        user.setOnline();
-        user.update(allowPings, allowAvatars, s2cChunkSize);
+    private CompletableFuture<FiguraUser> wrapHandle(Either<FiguraUser, FutureHandle> handle) {
+        if (handle.isA()) return CompletableFuture.completedFuture(handle.a());
+        FutureHandle futureHandle = handle.b();
+        CompletableFuture<FiguraUser> future = futureHandle.future;
+        if (future.isDone()) {
+            try {
+                FiguraUser user = future.join();
+                handle.setA(user);
+                return CompletableFuture.completedFuture(user);
+            }
+            catch (Exception e) {
+                Events.call(new UserLoadingExceptionEvent(futureHandle.user, e));
+            }
+        }
+        return null; // TODO
+    }
+
+    public CompletableFuture<Void> setupOnlinePlayer(UUID uuid, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
+        CompletableFuture<FiguraUser> user = getUser(uuid);
         expectedUsers.remove(uuid); // This is called either way just to remove it in case if it was first time initialization
+        return user.thenAcceptAsync(u -> {
+            u.setOnline();
+            u.update(allowPings, allowAvatars, s2cChunkSize);
+        });
     }
 
 
-    private FiguraUser loadPlayerData(UUID player) {
+    private CompletableFuture<FiguraUser> startLoadingPlayerData(UUID player) {
         LoadPlayerDataEvent playerDataEvent = Events.call(new LoadPlayerDataEvent(player));
         if (playerDataEvent.returned()) return playerDataEvent.returnValue();
         Path dataFile = parent.getUserdataFile(player);
-        return FiguraUser.load(player, dataFile);
+        return CompletableFuture.supplyAsync(() -> FiguraUser.load(player, dataFile));
     }
 
     public void onUserLeave(UUID player) {
         users.computeIfPresent(player, (uuid, pl) -> {
-            pl.save(parent.getUserdataFile(pl.player()));
-            pl.setOffline();
-            return pl;
+            if (pl.isA()) {
+                FiguraUser user = pl.a();
+                user.save(parent.getUserdataFile(user.uuid()));
+                user.setOffline();
+                return pl;
+            }
+            else {
+                pl.b().future.cancel(false);
+                return null;
+            }
         });
     }
 
     public void close() {
-        for (FiguraUser pl: users.values()) {
-            pl.save(parent.getUserdataFile(pl.player()));
+        for (var handle: users.values()) {
+            if (handle.isA()) {
+                FiguraUser pl = handle.a();
+                pl.save(parent.getUserdataFile(pl.uuid()));
+            }
         }
         users.clear();
     }
@@ -70,4 +105,6 @@ public final class FiguraUserManager {
     public boolean isExpected(UUID user) {
         return expectedUsers.contains(user);
     }
+
+    private record FutureHandle(UUID user, CompletableFuture<FiguraUser> future) {}
 }

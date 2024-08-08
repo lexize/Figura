@@ -12,6 +12,7 @@ import org.figuramc.figura.server.utils.Utils;
 
 import java.nio.file.Path;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public abstract class FiguraServer {
     private static FiguraServer INSTANCE;
@@ -95,6 +96,10 @@ public abstract class FiguraServer {
         if (!event.isCancelled()) {
             sendPacketInternal(receiver, packet);
         }
+    }
+
+    public final void sendDeferredPacket(UUID receiver, CompletableFuture<Packet> packet) {
+        deferredPacketsQueue.sendPacket(receiver, packet);
     }
 
     protected abstract void sendPacketInternal(UUID receiver, Packet packet);
