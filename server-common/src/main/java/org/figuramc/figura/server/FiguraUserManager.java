@@ -51,7 +51,7 @@ public final class FiguraUserManager {
                 Events.call(new UserLoadingExceptionEvent(futureHandle.user, e));
             }
         }
-        return null; // TODO
+        return future;
     }
 
     public CompletableFuture<Void> setupOnlinePlayer(UUID uuid, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {

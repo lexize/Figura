@@ -11,13 +11,13 @@ import java.util.concurrent.CompletableFuture;
 
 public class DeferredPacketsQueue {
     private final FiguraServer parent;
-    private final HashMap<UUID, LinkedList<CompletableFuture<Packet>>> queues = new HashMap<>();
+    private final HashMap<UUID, LinkedList<CompletableFuture<? extends Packet>>> queues = new HashMap<>();
 
     public DeferredPacketsQueue(FiguraServer parent) {
         this.parent = parent;
     }
 
-    public void sendPacket(UUID receiver, CompletableFuture<Packet> futurePacket) {
+    public void sendPacket(UUID receiver, CompletableFuture<? extends Packet> futurePacket) {
         queues.computeIfAbsent(receiver, u -> new LinkedList<>()).add(futurePacket);
     }
 

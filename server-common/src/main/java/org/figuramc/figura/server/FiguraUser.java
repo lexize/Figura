@@ -8,8 +8,10 @@ import org.figuramc.figura.server.utils.OutputStreamByteBuf;
 import java.io.*;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.figuramc.figura.server.utils.Utils.copyBytes;
 
 public final class FiguraUser {
     private final UUID player;
@@ -78,6 +80,10 @@ public final class FiguraUser {
         FiguraServer.getInstance().sendPacket(player, packet);
     }
 
+    public void sendDeferredPacket(CompletableFuture<? extends Packet> packet) {
+        FiguraServer.getInstance().sendDeferredPacket(player, packet);
+    }
+
     public void save(Path file) {
         file.getParent().toFile().mkdirs();
         File playerFile = file.toFile();
@@ -135,8 +141,9 @@ public final class FiguraUser {
         return new FiguraUser(player, false, false, false, 0, prideBadges, equippedAvatars, ownedAvatars);
     }
 
-    public byte[] findEHash(byte[] hash) {
-        return null;
+    public CompletableFuture<byte[]> findEHash(byte[] hash) {
+        return FiguraServer.getInstance().avatarManager().getAvatarMetadata(hash).thenApply(a ->
+                copyBytes(a.getEHash(this.player)));
     }
 
     public void update(boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
