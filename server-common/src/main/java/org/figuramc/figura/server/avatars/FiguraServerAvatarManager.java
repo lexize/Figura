@@ -57,6 +57,7 @@ public final class FiguraServerAvatarManager {
 
     public void tick() {
         avatars.values().forEach(AvatarHandle::tick);
+        avatars.entrySet().removeIf((e) -> e.getValue().remove);
     }
 
     public void close() {
@@ -110,7 +111,7 @@ public final class FiguraServerAvatarManager {
          * Avatar will have more than one owner in case if multiple people uploaded the same avatar, so avatar with same hash.
          * @return Map of UUID to EHash
          */
-        public HashMap<UUID, Hash> owners() {
+        public synchronized HashMap<UUID, Hash> owners() {
             return owners;
         }
 
@@ -119,7 +120,7 @@ public final class FiguraServerAvatarManager {
          * Avatar can have more than one user equipping it.
          * @return Map of UUID to EHash
          */
-        public HashMap<UUID, Hash> equipped() {
+        public synchronized HashMap<UUID, Hash> equipped() {
             return equipped;
         }
 
@@ -186,6 +187,10 @@ public final class FiguraServerAvatarManager {
                 byteBuf.writeUUID(entry.getKey());
                 byteBuf.writeBytes(entry.getValue().get());
             }
+        }
+
+        public boolean canBeDeleted() {
+            return !cleanupProtection() && owners.isEmpty() && equipped.isEmpty();
         }
     }
 
@@ -266,6 +271,14 @@ public final class FiguraServerAvatarManager {
         catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private CompletableFuture<Void> deleteAvatar(Hash avatarHash) {
+        var f = Events.call(new RemoveAvatarDataEvent(avatarHash));
+        if (f.returned()) return f.returnValue();
+        parent.getAvatar(avatarHash.get()).toFile().delete();
+        parent.getAvatarMetadata(avatarHash.get()).toFile().delete();
+        return CompletableFuture.completedFuture(null);
     }
 
     private abstract class Awaiting {
@@ -351,6 +364,9 @@ public final class FiguraServerAvatarManager {
         private Either<AvatarMetadata, CompletableFuture<AvatarMetadata>> metadata;
         private final ArrayList<Awaiting> awaiting = new ArrayList<>();
         private final ArrayList<AvatarOutcomingStream> streams = new ArrayList<>();
+        private boolean remove;
+        private boolean markedForDeletion = false;
+        private CompletableFuture<Void> deleteFuture = null;
 
         private AvatarHandle(Hash hash) {
             this.hash = hash;
@@ -417,6 +433,14 @@ public final class FiguraServerAvatarManager {
         }
 
         private void tick() {
+            if (markedForDeletion && deleteFuture.isDone()) {
+                try {
+                    deleteFuture.join();
+                    remove = true;
+                } catch (Exception e) {
+                    Events.call(new AvatarDeletionException(hash, e));
+                }
+            }
             var data = getAvatarData();
             var metadata = getMetadata();
 
@@ -437,7 +461,13 @@ public final class FiguraServerAvatarManager {
             }
 
             awaiting.removeIf(Awaiting::finish);
-            data.a().tick();
+            if (data.isA()) {
+                data.a().tick();
+            }
+            if (metadata.isA() && metadata.a().canBeDeleted()) {
+                deleteFuture = deleteAvatar(hash);
+                markedForDeletion = true;
+            }
             streams.forEach(AvatarOutcomingStream::tick);
         }
     }
@@ -556,7 +586,7 @@ public final class FiguraServerAvatarManager {
                 finished = true;
                 CompletableFuture<? extends Packet> future = parent.userManager().getUser(uploader)
                         .thenApplyAsync( u -> {
-                            u.replaceOrAddOwnedAvatar(avatarId, hash, ehash);
+                            u.replaceOrAddOwnedAvatar(avatarId, hash, ehash).join();
                             return new S2COwnedAvatarsPacket(u.ownedAvatars());
                         });
                 parent.sendDeferredPacket(uploader, future);

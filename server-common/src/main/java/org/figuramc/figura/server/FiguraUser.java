@@ -170,12 +170,42 @@ public final class FiguraUser {
         online = false;
     }
 
-    public void replaceOrAddOwnedAvatar(String avatarId, Hash hash, Hash ehash) {
-        // TODO removal from metadata of unused avatar
+    public CompletableFuture<Void> removeOwnedAvatar(String avatarId) {
+        if (ownedAvatars.containsKey(avatarId)) {
+            return CompletableFuture.completedFuture(null);
+        }
+        else {
+            UserdataAvatar avatar = ownedAvatars.remove(avatarId);
+            return FiguraServer.getInstance().avatarManager().getAvatarMetadata(avatar.hash()).thenAcceptAsync(m -> {
+                 m.owners().remove(this.uuid());
+            });
+        }
     }
 
-    public void replaceOrAddEquippedAvatar(String avatarId, Hash hash, Hash ehash) {
-        // TODO removal from metadata of unused avatar
+    public CompletableFuture<Void> removeEquippedAvatar(String avatarId) {
+        if (equippedAvatars.containsKey(avatarId)) {
+            return CompletableFuture.completedFuture(null);
+        }
+        else {
+            UserdataAvatar avatar = equippedAvatars.remove(avatarId);
+            return FiguraServer.getInstance().avatarManager().getAvatarMetadata(avatar.hash()).thenAcceptAsync(m -> {
+                m.owners().remove(uuid());
+            });
+        }
+    }
+
+    public CompletableFuture<Void> replaceOrAddOwnedAvatar(String avatarId, Hash hash, Hash ehash) {
+        return removeOwnedAvatar(avatarId).thenRunAsync(() -> {
+            ownedAvatars.put(avatarId, new UserdataAvatar(hash, ehash));
+            FiguraServer.getInstance().avatarManager().getAvatarMetadata(hash).join().owners().put(uuid(), ehash);
+        });
+    }
+
+    public CompletableFuture<Void> replaceOrAddEquippedAvatar(String avatarId, Hash hash, Hash ehash) {
+        return removeEquippedAvatar(avatarId).thenRunAsync(() -> {
+            equippedAvatars.put(avatarId, new UserdataAvatar(hash, ehash));
+            FiguraServer.getInstance().avatarManager().getAvatarMetadata(hash).join().equipped().put(uuid(), ehash);
+        });
     }
 
     private static class PingCounter {
