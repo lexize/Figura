@@ -160,10 +160,10 @@ public interface IFriendlyByteBuf {
         readBytes(arr);
         return arr;
     }
-    default byte[] readHash() {
+    default Hash readHash() {
         byte[] buffer = new byte[32];
         readBytes(buffer);
-        return buffer;
+        return new Hash(buffer);
     }
 
     int readerIndex();

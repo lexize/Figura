@@ -5,6 +5,7 @@ import org.figuramc.figura.server.FiguraUser;
 import org.figuramc.figura.server.avatars.UserdataAvatar;
 import org.figuramc.figura.server.packets.c2s.C2SFetchUserdataPacket;
 import org.figuramc.figura.server.packets.s2c.S2CUserdataPacket;
+import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 
 import java.util.BitSet;
@@ -26,14 +27,11 @@ public class C2SFetchUserdataPacketHandler extends AuthorizedC2SPacketHandler<C2
         CompletableFuture<S2CUserdataPacket> packetFuture = user.thenApply(u -> {
             UUID target = u.uuid();
             HashMap<String, UserdataAvatar> avatars = new HashMap<>();
-            // Collecting EHashes for requested user
-            for (Map.Entry<String, byte[]> entry : u.equippedAvatars().entrySet()) {
-                byte[] hash = entry.getValue();
-                try {
-                    var meta = parent.avatarManager().getAvatarMetadata(hash).join();
-                    byte[] ehash = meta.getEHash(target);
-                    avatars.put(entry.getKey(), new UserdataAvatar(hash, ehash));
-                } catch (Exception ignored) {}
+            // Collecting hashes for requested user
+            for (Map.Entry<String, UserdataAvatar> entry : u.equippedAvatars().entrySet()) {
+                Hash hash = entry.getValue().hash();
+                Hash ehash = entry.getValue().ehash();
+                avatars.put(entry.getKey(), new UserdataAvatar(hash, ehash));
             }
             BitSet badges = u.prideBadges();
             return new S2CUserdataPacket(target, badges, avatars);

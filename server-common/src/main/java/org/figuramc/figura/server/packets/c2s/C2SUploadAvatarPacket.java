@@ -1,6 +1,7 @@
 package org.figuramc.figura.server.packets.c2s;
 
 import org.figuramc.figura.server.packets.Packet;
+import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Identifier;
 
@@ -11,18 +12,20 @@ public class C2SUploadAvatarPacket implements Packet {
 
     private final int streamId;
     private final String avatarId;
-    private final byte[] ehash;
+    private final Hash hash;
+    private final Hash ehash;
 
-    public C2SUploadAvatarPacket(int streamId, String avatarId, byte[] ehash) {
+    public C2SUploadAvatarPacket(int streamId, String avatarId, Hash hash, Hash ehash) {
         this.streamId = streamId;
         this.avatarId = avatarId;
-        if (ehash.length != 32) throw new IllegalArgumentException("Invalid ehash length");
+        this.hash = hash;
         this.ehash = ehash;
     }
 
     public C2SUploadAvatarPacket(IFriendlyByteBuf buf) {
         this.streamId = buf.readInt();
         this.avatarId = new String(buf.readByteArray(256), UTF_8);
+        this.hash = buf.readHash();
         this.ehash = buf.readHash();
     }
 
@@ -34,7 +37,11 @@ public class C2SUploadAvatarPacket implements Packet {
         return avatarId;
     }
 
-    public byte[] ehash() {
+    public Hash hash() {
+        return hash;
+    }
+
+    public Hash ehash() {
         return ehash;
     }
 
@@ -42,7 +49,8 @@ public class C2SUploadAvatarPacket implements Packet {
     public void write(IFriendlyByteBuf buf) {
         buf.writeInt(streamId);
         buf.writeByteArray(avatarId.getBytes(UTF_8));
-        buf.writeBytes(ehash);
+        buf.writeBytes(hash.get());
+        buf.writeBytes(ehash.get());
     }
 
     @Override

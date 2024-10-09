@@ -1,6 +1,8 @@
 package org.figuramc.figura.server;
 
+import org.figuramc.figura.server.avatars.UserdataAvatar;
 import org.figuramc.figura.server.packets.Packet;
+import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.InputStreamByteBuf;
 import org.figuramc.figura.server.utils.OutputStreamByteBuf;
@@ -11,7 +13,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.figuramc.figura.server.utils.Utils.copyBytes;
 
 public final class FiguraUser {
     private final UUID player;
@@ -21,11 +22,11 @@ public final class FiguraUser {
     private int s2cChunkSize;
     private final PingCounter pingCounter = new PingCounter();
     private final BitSet prideBadges;
-    private final HashMap<String, byte[]> equippedAvatars;
+    private final HashMap<String, UserdataAvatar> equippedAvatars;
 
-    private final HashMap<String, byte[]> ownedAvatars;
+    private final HashMap<String, UserdataAvatar> ownedAvatars;
 
-    public FiguraUser(UUID player, boolean online, boolean allowPings, boolean allowAvatars, int s2cChunkSize, BitSet prideBadges, HashMap<String, byte[]> equippedAvatars, HashMap<String, byte[]> ownedAvatars) {
+    public FiguraUser(UUID player, boolean online, boolean allowPings, boolean allowAvatars, int s2cChunkSize, BitSet prideBadges, HashMap<String, UserdataAvatar> equippedAvatars, HashMap<String, UserdataAvatar> ownedAvatars) {
         this.player = player;
         this.online = online;
         this.pings = allowPings;
@@ -68,11 +69,11 @@ public final class FiguraUser {
         return prideBadges;
     }
 
-    public HashMap<String, byte[]> equippedAvatars() {
+    public HashMap<String, UserdataAvatar> equippedAvatars() {
         return equippedAvatars;
     }
 
-    public HashMap<String, byte[]> ownedAvatars() {
+    public HashMap<String, UserdataAvatar> ownedAvatars() {
         return ownedAvatars;
     }
 
@@ -102,12 +103,14 @@ public final class FiguraUser {
         buf.writeVarInt(equippedAvatars.size());
         for (var equippedAvatar : equippedAvatars.entrySet()) {
             buf.writeByteArray(equippedAvatar.getKey().getBytes(UTF_8));
-            buf.writeBytes(equippedAvatar.getValue());
+            buf.writeBytes(equippedAvatar.getValue().hash().get());
+            buf.writeBytes(equippedAvatar.getValue().ehash().get());
         }
         buf.writeVarInt(ownedAvatars.size());
         for (var ownedAvatar : ownedAvatars.entrySet()) {
             buf.writeByteArray(ownedAvatar.getKey().getBytes(UTF_8));
-            buf.writeBytes(ownedAvatar.getValue());
+            buf.writeBytes(ownedAvatar.getValue().hash().get());
+            buf.writeBytes(ownedAvatar.getValue().ehash().get());
         }
     }
 
@@ -125,25 +128,32 @@ public final class FiguraUser {
     public static FiguraUser load(UUID player, IFriendlyByteBuf buf) {
         BitSet prideBadges = BitSet.valueOf(buf.readByteArray(256));
         int equippedAvatarsCount = buf.readVarInt();
-        HashMap<String, byte[]> equippedAvatars = new HashMap<>();
+        HashMap<String, UserdataAvatar> equippedAvatars = new HashMap<>();
         for (int i = 0; i < equippedAvatarsCount; i++) {
             String id = new String(buf.readByteArray(256), UTF_8);
-            byte[] hash = buf.readHash();
-            equippedAvatars.put(id, hash);
+            Hash hash = buf.readHash();
+            Hash ehash = buf.readHash();
+            equippedAvatars.put(id, new UserdataAvatar(hash, ehash));
         }
-        HashMap<String, byte[]> ownedAvatars = new HashMap<>();
+        HashMap<String, UserdataAvatar> ownedAvatars = new HashMap<>();
         int ownedAvatarsCount = buf.readVarInt();
         for (int i = 0; i < ownedAvatarsCount; i++) {
             String id = new String(buf.readByteArray(256), UTF_8);
-            byte[] hash = buf.readHash();
-            ownedAvatars.put(id, hash);
+            Hash hash = buf.readHash();
+            Hash ehash = buf.readHash();
+            ownedAvatars.put(id, new UserdataAvatar(hash, ehash));
         }
         return new FiguraUser(player, false, false, false, 0, prideBadges, equippedAvatars, ownedAvatars);
     }
 
-    public CompletableFuture<byte[]> findEHash(byte[] hash) {
-        return FiguraServer.getInstance().avatarManager().getAvatarMetadata(hash).thenApply(a ->
-                copyBytes(a.getEHash(this.player)));
+    public Hash findEHash(Hash hash) {
+        for (UserdataAvatar pair: equippedAvatars.values()) {
+            if (pair.hash().equals(hash)) return pair.ehash();
+        }
+        for (UserdataAvatar pair: ownedAvatars.values()) {
+            if (pair.hash().equals(hash)) return pair.ehash();
+        }
+        return null;
     }
 
     public void update(boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
@@ -158,6 +168,14 @@ public final class FiguraUser {
 
     public void setOffline() {
         online = false;
+    }
+
+    public void replaceOrAddOwnedAvatar(String avatarId, Hash hash, Hash ehash) {
+        // TODO removal from metadata of unused avatar
+    }
+
+    public void replaceOrAddEquippedAvatar(String avatarId, Hash hash, Hash ehash) {
+        // TODO removal from metadata of unused avatar
     }
 
     private static class PingCounter {

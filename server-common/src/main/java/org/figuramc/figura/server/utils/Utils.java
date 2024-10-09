@@ -3,6 +3,7 @@ package org.figuramc.figura.server.utils;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 public class Utils {
@@ -108,10 +109,10 @@ public class Utils {
         };
     }
 
-    public static byte[] getHash(byte[] data) {
+    public static Hash getHash(byte[] data) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return digest.digest(data);
+            return new Hash(digest.digest(data));
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }

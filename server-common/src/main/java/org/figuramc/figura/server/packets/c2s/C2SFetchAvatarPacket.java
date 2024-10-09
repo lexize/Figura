@@ -1,6 +1,7 @@
 package org.figuramc.figura.server.packets.c2s;
 
 import org.figuramc.figura.server.packets.Packet;
+import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Identifier;
 
@@ -11,11 +12,10 @@ public class C2SFetchAvatarPacket implements Packet {
     public static final Identifier PACKET_ID = new Identifier("figura", "avatars/fetch");
 
     private final int streamId;
-    private final byte[] hash;
+    private final Hash hash;
 
-    public C2SFetchAvatarPacket(int streamId, byte[] hash) {
+    public C2SFetchAvatarPacket(int streamId, Hash hash) {
         this.streamId = streamId;
-        if (hash.length != 32) throw new IllegalArgumentException("Invalid hash length");
         this.hash = hash;
     }
 
@@ -28,14 +28,14 @@ public class C2SFetchAvatarPacket implements Packet {
         return streamId;
     }
 
-    public byte[] hash() {
+    public Hash hash() {
         return hash;
     }
 
     @Override
     public void write(IFriendlyByteBuf byteBuf) {
         byteBuf.writeInt(streamId);
-        byteBuf.writeBytes(hash);
+        byteBuf.writeBytes(hash.get());
     }
 
     @Override

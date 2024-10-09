@@ -1,6 +1,7 @@
 package org.figuramc.figura.server.packets.s2c;
 
 import org.figuramc.figura.server.packets.Packet;
+import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Identifier;
 
@@ -8,16 +9,18 @@ public class S2CInitializeAvatarStreamPacket implements Packet {
     public static final Identifier PACKET_ID = new Identifier("figura", "stream/init");
 
     private final int streamId;
-    private final byte[] ehash;
+    private final Hash hash;
+    private final Hash ehash;
 
-    public S2CInitializeAvatarStreamPacket(int streamId, byte[] ehash) {
+    public S2CInitializeAvatarStreamPacket(int streamId, Hash hash, Hash ehash) {
         this.streamId = streamId;
-        if (ehash.length != 32) throw new IllegalArgumentException("Invalid ehash length");
+        this.hash = hash;
         this.ehash = ehash;
     }
 
     public S2CInitializeAvatarStreamPacket(IFriendlyByteBuf buf) {
         streamId = buf.readInt();
+        hash = buf.readHash();
         ehash = buf.readHash();
     }
 
@@ -25,14 +28,15 @@ public class S2CInitializeAvatarStreamPacket implements Packet {
         return streamId;
     }
 
-    public byte[] ehash() {
+    public Hash ehash() {
         return ehash;
     }
 
     @Override
     public void write(IFriendlyByteBuf buf) {
         buf.writeInt(streamId);
-        buf.writeBytes(ehash);
+        buf.writeBytes(hash.get());
+        buf.writeBytes(ehash.get());
     }
 
     @Override

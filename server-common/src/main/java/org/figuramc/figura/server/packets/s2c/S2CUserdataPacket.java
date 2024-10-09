@@ -2,6 +2,7 @@ package org.figuramc.figura.server.packets.s2c;
 
 import org.figuramc.figura.server.avatars.UserdataAvatar;
 import org.figuramc.figura.server.packets.Packet;
+import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Identifier;
 
@@ -32,8 +33,8 @@ public class S2CUserdataPacket implements Packet {
         int avatarsCount = byteBuf.readVarInt();
         for (int i = 0; i < avatarsCount; i++) {
             String avatarId = new String(byteBuf.readByteArray(Integer.MAX_VALUE), UTF_8);
-            byte[] hash = byteBuf.readHash();
-            byte[] ehash = byteBuf.readHash();
+            Hash hash = byteBuf.readHash();
+            Hash ehash = byteBuf.readHash();
             avatars.put(avatarId, new UserdataAvatar(hash, ehash));
         }
     }
@@ -57,8 +58,8 @@ public class S2CUserdataPacket implements Packet {
         byteBuf.writeVarInt(avatars.size());
         for (Map.Entry<String, UserdataAvatar> avatar: avatars.entrySet()) {
             byteBuf.writeByteArray(avatar.getKey().getBytes(UTF_8));
-            byteBuf.writeBytes(avatar.getValue().hash());
-            byteBuf.writeBytes(avatar.getValue().ehash());
+            byteBuf.writeBytes(avatar.getValue().hash().get());
+            byteBuf.writeBytes(avatar.getValue().ehash().get());
         }
     }
 

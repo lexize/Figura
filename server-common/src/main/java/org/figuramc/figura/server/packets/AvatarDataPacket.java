@@ -27,6 +27,10 @@ public class AvatarDataPacket implements Packet {
         this.avatarData = buf.readBytes();
     }
 
+    public int streamId() {
+        return streamId;
+    }
+
     public boolean finalChunk() {
         return finalChunk;
     }

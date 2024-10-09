@@ -1,12 +1,13 @@
 package org.figuramc.figura.server.exceptions;
 
+import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.server.utils.Utils;
 
 public class HashNotMatchingException extends RuntimeException {
-    private final byte[] expectedHash;
-    private final byte[] actualHash;
+    private final Hash expectedHash;
+    private final Hash actualHash;
 
-    public HashNotMatchingException(byte[] expectedHash, byte[] actualHash) {
+    public HashNotMatchingException(Hash expectedHash, Hash actualHash) {
         this.expectedHash = expectedHash;
         this.actualHash = actualHash;
     }
@@ -14,14 +15,14 @@ public class HashNotMatchingException extends RuntimeException {
     @Override
     public String toString() {
         return "Expected hash %s for avatar data, got %s".formatted(
-                Utils.hexFromBytes(expectedHash), Utils.hexFromBytes(actualHash));
+                expectedHash, actualHash);
     }
 
-    public byte[] expectedHash() {
+    public Hash expectedHash() {
         return expectedHash;
     }
 
-    public byte[] actualHash() {
+    public Hash actualHash() {
         return actualHash;
     }
 }

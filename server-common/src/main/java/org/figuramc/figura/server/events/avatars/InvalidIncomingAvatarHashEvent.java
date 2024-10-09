@@ -6,15 +6,13 @@ import org.figuramc.figura.server.utils.Hash;
 import java.util.List;
 import java.util.UUID;
 
-public class InvalidAvatarHashEvent extends Event {
+public class InvalidIncomingAvatarHashEvent extends Event {
     private final Hash expectedHash;
     private final Hash receivedHash;
-    private final List<UUID> awaitingUsers;
 
-    public InvalidAvatarHashEvent(Hash expectedHash, Hash receivedHash, List<UUID> awaitingUsers) {
+    public InvalidIncomingAvatarHashEvent(Hash expectedHash, Hash receivedHash) {
         this.expectedHash = expectedHash;
         this.receivedHash = receivedHash;
-        this.awaitingUsers = awaitingUsers;
     }
 
     public Hash expectedHash() {
@@ -23,9 +21,5 @@ public class InvalidAvatarHashEvent extends Event {
 
     public Hash receivedHash() {
         return receivedHash;
-    }
-
-    public List<UUID> awaitingUsers() {
-        return awaitingUsers;
     }
 }

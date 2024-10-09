@@ -5,6 +5,7 @@ import org.figuramc.figura.server.FiguraUser;
 import org.figuramc.figura.server.events.Events;
 import org.figuramc.figura.server.events.avatars.AvatarFetchEvent;
 import org.figuramc.figura.server.packets.c2s.C2SFetchAvatarPacket;
+import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Utils;
 
@@ -16,10 +17,8 @@ public class C2SFetchAvatarPacketHandler extends AuthorizedC2SPacketHandler<C2SF
     @Override
     protected void handle(FiguraUser sender, C2SFetchAvatarPacket packet) {
         var hash = packet.hash();
-        if (!Events.call(new AvatarFetchEvent(
-                Utils.copyBytes(hash)
-        )).isCancelled()) {
-            parent.avatarManager().sendAvatar(Utils.copyBytes(hash), sender.uuid(), packet.streamId());
+        if (!Events.call(new AvatarFetchEvent(hash)).isCancelled()) {
+            parent.avatarManager().sendAvatar(hash, sender.uuid(), packet.streamId());
         }
     }
 
