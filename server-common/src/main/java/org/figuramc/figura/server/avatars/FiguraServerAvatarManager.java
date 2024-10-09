@@ -10,13 +10,9 @@ import org.figuramc.figura.server.packets.CloseIncomingStreamPacket;
 import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.server.packets.s2c.S2CInitializeAvatarStreamPacket;
 import org.figuramc.figura.server.packets.s2c.S2COwnedAvatarsPacket;
-import org.figuramc.figura.server.utils.Either;
-import org.figuramc.figura.server.utils.Hash;
-import org.figuramc.figura.server.utils.Utils;
+import org.figuramc.figura.server.utils.*;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -47,8 +43,10 @@ public final class FiguraServerAvatarManager {
     }
 
     public CompletableFuture<Boolean> avatarExists(Hash hash) {
-        // TODO
-        return null;
+        var future = Events.call(new AvatarExistenceFetchEvent(hash));
+        if (future.returned()) return future.returnValue();
+        var file = parent.getAvatar(hash.get()).toFile();
+        return CompletableFuture.completedFuture(file.exists());
     }
 
     public CompletableFuture<AvatarMetadata> getAvatarMetadata(Hash hash) {
@@ -59,6 +57,14 @@ public final class FiguraServerAvatarManager {
 
     public void tick() {
         avatars.values().forEach(AvatarHandle::tick);
+    }
+
+    public void close() {
+        avatars.forEach((hash, handle) -> {
+            if (handle.metadata.isA()) {
+                saveMetadata(hash, handle.metadata.a());
+            }
+        });
     }
 
     public static class AvatarData {
@@ -144,6 +150,43 @@ public final class FiguraServerAvatarManager {
         private static AvatarMetadata fromJsonBytes(byte[] bytes) {
             return null; // TODO
         }
+
+        public static AvatarMetadata read(byte[] bytes) {
+            ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+            InputStreamByteBuf byteBuf = new InputStreamByteBuf(bais);
+
+            int ownersCount = byteBuf.readInt();
+            HashMap<UUID, Hash> owners = new HashMap<>();
+            for (int i = 0; i < ownersCount; i++) {
+                UUID owner = byteBuf.readUUID();
+                Hash ehash = byteBuf.readHash();
+                owners.put(owner, ehash);
+            }
+
+            HashMap<UUID, Hash> equipped = new HashMap<>();
+            for (int i = 0; i < ownersCount; i++) {
+                UUID owner = byteBuf.readUUID();
+                Hash ehash = byteBuf.readHash();
+                equipped.put(owner, ehash);
+            }
+
+            return new AvatarMetadata(owners, equipped);
+        }
+
+        public void write(OutputStream os) {
+            OutputStreamByteBuf byteBuf = new OutputStreamByteBuf(os);
+            byteBuf.writeInt(owners.size());
+            for (Map.Entry<UUID, Hash> entry : owners.entrySet()) {
+                byteBuf.writeUUID(entry.getKey());
+                byteBuf.writeBytes(entry.getValue().get());
+            }
+
+            byteBuf.writeInt(equipped.size());
+            for (Map.Entry<UUID, Hash> entry : equipped.entrySet()) {
+                byteBuf.writeUUID(entry.getKey());
+                byteBuf.writeBytes(entry.getValue().get());
+            }
+        }
     }
 
     private static class AvatarOutcomingStream {
@@ -203,7 +246,8 @@ public final class FiguraServerAvatarManager {
         }
     }
 
-    private void writeAvatar(Hash avatarHash, byte[] avatarData) {
+    private void saveAvatar(Hash avatarHash, byte[] avatarData) {
+        if (Events.call(new StoreAvatarDataEvent(avatarData, avatarHash)).isCancelled()) return;
         var file = parent.getAvatar(avatarHash.get()).toFile();
         try (FileOutputStream fos = new FileOutputStream(file)) {
             fos.write(avatarData);
@@ -213,8 +257,15 @@ public final class FiguraServerAvatarManager {
         }
     }
 
-    private void writeMetadata(Hash avatarHash, AvatarMetadata metadata) {
-        // TODO avatar metadata saving
+    private void saveMetadata(Hash avatarHash, AvatarMetadata metadata) {
+        if (Events.call(new StoreAvatarMetadataEvent(avatarHash, metadata)).isCancelled()) return;
+        var file = parent.getAvatarMetadata(avatarHash.get()).toFile();
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            metadata.write(fos);
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private abstract class Awaiting {
@@ -362,7 +413,7 @@ public final class FiguraServerAvatarManager {
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
-            }).thenApply(AvatarMetadata::fromJsonBytes);
+            }).thenApply(AvatarMetadata::read);
         }
 
         private void tick() {
@@ -461,9 +512,7 @@ public final class FiguraServerAvatarManager {
                     }
 
                     // Writing avatar data
-                    if (!Events.call(new StoreAvatarDataEvent(avatarData, hash)).isCancelled()) {
-                        writeAvatar(hash, avatarData);
-                    }
+                    saveAvatar(hash, avatarData);
 
                     // Creating a new avatar handle
                     var avatarHandle = getAvatarHandle(hash);
@@ -477,9 +526,7 @@ public final class FiguraServerAvatarManager {
                     }
 
                     // Writing avatar metadata
-                    if (!Events.call(new StoreAvatarMetadataEvent(hash, metadata)).isCancelled()) {
-                        writeMetadata(hash, metadata);
-                    }
+                    saveMetadata(hash, metadata);
 
                     avatarHandle.metadata = Either.newA(metadata);
 
