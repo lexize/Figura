@@ -19,7 +19,15 @@ public class C2SUploadAvatarPacketHandler extends AuthorizedC2SPacketHandler<C2S
 
     @Override
     protected void handle(FiguraUser sender, C2SUploadAvatarPacket packet) {
-        // TODO
+        sender.sendDeferredPacket(parent.avatarManager().avatarExists(packet.hash()).thenApplyAsync(avatarExists -> {
+            if (avatarExists) {
+                return new CloseIncomingStreamPacket(packet.streamId());
+            }
+            else {
+                parent.avatarManager().receiveAvatar(sender, packet.avatarId(), packet.streamId(), packet.hash(), packet.ehash());
+                return new AllowIncomingStreamPacket(packet.streamId());
+            }
+        }));
     }
 
     private int getNewAvatarsCount(FiguraUser user, String id) {

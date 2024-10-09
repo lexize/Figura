@@ -1,6 +1,7 @@
 package org.figuramc.figura.server.avatars;
 
 import org.figuramc.figura.server.FiguraServer;
+import org.figuramc.figura.server.FiguraUser;
 import org.figuramc.figura.server.events.Events;
 import org.figuramc.figura.server.events.avatars.*;
 import org.figuramc.figura.server.exceptions.HashNotMatchingException;
@@ -14,6 +15,7 @@ import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.server.utils.Utils;
 
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
@@ -34,6 +36,19 @@ public final class FiguraServerAvatarManager {
 
     private AvatarHandle getAvatarHandle(Hash hash) {
         return avatars.computeIfAbsent(hash, AvatarHandle::new);
+    }
+
+    public synchronized void receiveAvatar(FiguraUser uploader, String avatarId, int streamId, Hash avatarHash, Hash avatarEHash) {
+        incomingAvatarHandler.openStream(uploader.uuid(), avatarId, streamId, avatarHash, avatarEHash);
+    }
+
+    public void acceptAvatarChunk(FiguraUser uploader, int streamId, byte[] data, boolean finalChunk) {
+        incomingAvatarHandler.acceptChunk(uploader.uuid(), streamId, data, finalChunk);
+    }
+
+    public CompletableFuture<Boolean> avatarExists(Hash hash) {
+        // TODO
+        return null;
     }
 
     public CompletableFuture<AvatarMetadata> getAvatarMetadata(Hash hash) {
@@ -65,6 +80,7 @@ public final class FiguraServerAvatarManager {
     }
     public static class AvatarMetadata {
         private final HashMap<UUID, Hash> owners;
+        private final HashMap<UUID, Hash> equipped;
         private boolean cleanupProtection = false;
 
         /**
@@ -72,13 +88,15 @@ public final class FiguraServerAvatarManager {
          */
         public AvatarMetadata() {
             this.owners = new HashMap<>();
+            this.equipped = new HashMap<>();
         }
 
         /**
          * Creates metadata with avatar owners
          */
-        public AvatarMetadata(HashMap<UUID, Hash> owners) {
+        public AvatarMetadata(HashMap<UUID, Hash> owners, HashMap<UUID, Hash> equipped) {
             this.owners = owners;
+            this.equipped = equipped;
         }
 
         /**
@@ -88,6 +106,15 @@ public final class FiguraServerAvatarManager {
          */
         public HashMap<UUID, Hash> owners() {
             return owners;
+        }
+
+        /**
+         * Map of users who has this avatar equipped.
+         * Avatar can have more than one user equipping it.
+         * @return Map of UUID to EHash
+         */
+        public HashMap<UUID, Hash> equipped() {
+            return equipped;
         }
 
         /**
@@ -106,7 +133,11 @@ public final class FiguraServerAvatarManager {
             return this;
         }
 
-        public Hash getEHash(UUID owner) {
+        public Hash getOwnerEHash(UUID owner) {
+            return owners.get(owner);
+        }
+
+        public Hash getEquippedEHash(UUID owner) {
             return owners.get(owner);
         }
 
@@ -133,7 +164,7 @@ public final class FiguraServerAvatarManager {
 
         private int getChunkSize() {
             var inst = FiguraServer.getInstance();
-            var user = inst.userManager().getUserOrNull(receiver).join();
+            var user = inst.userManager().getUser(receiver).join();
             int serverLimit = inst.config().s2cChunkSize();
             int maxServerLimit = serverLimit <= 0 ? AvatarDataPacket.MAX_CHUNK_SIZE : serverLimit;
             int clientLimit = user.s2cChunkSize();
@@ -170,6 +201,20 @@ public final class FiguraServerAvatarManager {
         public int hashCode() {
             return Objects.hash(receiver, hash);
         }
+    }
+
+    private void writeAvatar(Hash avatarHash, byte[] avatarData) {
+        var file = parent.getAvatar(avatarHash.get()).toFile();
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            fos.write(avatarData);
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void writeMetadata(Hash avatarHash, AvatarMetadata metadata) {
+        // TODO avatar metadata saving
     }
 
     private abstract class Awaiting {
@@ -217,7 +262,7 @@ public final class FiguraServerAvatarManager {
             var metadata = parent.getMetadata();
             if (data.isA() && metadata.isA()) {
                 parent.streams.add(new AvatarOutcomingStream(receiver, data.a(), streamId,
-                        parent.hash, metadata.a().getEHash(receiver)));
+                        parent.hash, metadata.a().getOwnerEHash(receiver)));
                 return true;
             }
             return false;
@@ -350,6 +395,27 @@ public final class FiguraServerAvatarManager {
         private final HashMap<Hash, ArrayList<IncomingAvatarKey>> hashesToUploads = new HashMap<>();
         private final HashMap<IncomingAvatarKey, AvatarIncomingStream> streams = new HashMap<>();
 
+        private void openStream(UUID uploader, String avatarId, int streamId, Hash avatarHash, Hash avatarEHash) {
+            var key = new IncomingAvatarKey(uploader, streamId);
+            streams.put(new IncomingAvatarKey(uploader, streamId),
+                    new AvatarIncomingStream(uploader, streamId, avatarId, avatarHash, avatarEHash)
+            );
+            hashesToUploads.computeIfAbsent(avatarHash, h -> new ArrayList<>()).add(key);
+        }
+
+        public void acceptChunk(UUID uuid, int streamId, byte[] data, boolean finalChunk) {
+            var key = new IncomingAvatarKey(uuid, streamId);
+            if (!streams.containsKey(key)) {
+                parent.sendPacket(uuid, new CloseIncomingStreamPacket(streamId));
+                return;
+            }
+
+            var s = streams.get(key);
+            if (s.acceptDataChunk(data, finalChunk)) {
+                streams.entrySet().removeIf(e -> e.getValue().isFinished());
+            }
+        }
+
         private class AvatarIncomingStream {
             private final LinkedList<byte[]> dataChunks = new LinkedList<>();
             private final UUID uploader;
@@ -358,6 +424,7 @@ public final class FiguraServerAvatarManager {
             private final Hash hash;
             private final Hash ehash;
             private int size = 0;
+            private boolean finished;
 
             private AvatarIncomingStream(UUID uploader, int streamId, String avatarId, Hash hash, Hash ehash) {
                 this.uploader = uploader;
@@ -392,7 +459,41 @@ public final class FiguraServerAvatarManager {
                         Events.call(new InvalidIncomingAvatarHashEvent(hash, dataHash));
                         return true;
                     }
-                    // TODO actually adding avatar to manager, and saving it
+
+                    // Writing avatar data
+                    if (!Events.call(new StoreAvatarDataEvent(avatarData, hash)).isCancelled()) {
+                        writeAvatar(hash, avatarData);
+                    }
+
+                    // Creating a new avatar handle
+                    var avatarHandle = getAvatarHandle(hash);
+                    avatarHandle.data = Either.newA(new AvatarData(avatarData));
+
+                    // Creating empty metadata for this avatar with all the avatar owners
+                    AvatarMetadata metadata = new AvatarMetadata();
+                    for (IncomingAvatarKey key: hashesToUploads.get(hash)) {
+                        var stream = streams.get(key);
+                        metadata.owners.put(stream.uploader, stream.ehash);
+                    }
+
+                    // Writing avatar metadata
+                    if (!Events.call(new StoreAvatarMetadataEvent(hash, metadata)).isCancelled()) {
+                        writeMetadata(hash, metadata);
+                    }
+
+                    avatarHandle.metadata = Either.newA(metadata);
+
+                    // Finishing work of all streams
+                    var selfKey = new IncomingAvatarKey(uploader, streamId);
+                    for (IncomingAvatarKey key: hashesToUploads.get(hash)) {
+                        var stream = streams.get(key);
+                        stream.finish(selfKey.equals(key));
+                    }
+
+                    // Removing keys from hash map
+                    hashesToUploads.remove(hash);
+
+                    return true;
                 }
 
                 return false;
@@ -402,9 +503,10 @@ public final class FiguraServerAvatarManager {
                 parent.sendPacket(uploader, new CloseIncomingStreamPacket(streamId));
             }
 
-            private void finish(boolean userFinishedUploading) {
+            private void finish(boolean uploadingFinisher) {
                 // Immediately closing our stream if the user is not the one who finished uploading earlier
-                if (!userFinishedUploading) close();
+                if (!uploadingFinisher) close();
+                finished = true;
                 CompletableFuture<? extends Packet> future = parent.userManager().getUser(uploader)
                         .thenApplyAsync( u -> {
                             u.replaceOrAddOwnedAvatar(avatarId, hash, ehash);
@@ -412,7 +514,12 @@ public final class FiguraServerAvatarManager {
                         });
                 parent.sendDeferredPacket(uploader, future);
             }
+
+            private boolean isFinished() {
+                return finished;
+            }
         }
+
     }
 
     private record IncomingAvatarKey(UUID uploader, int streamId) {}
