@@ -12,8 +12,7 @@ public class C2SAvatarDataPacket extends AuthorizedC2SPacketHandler<AvatarDataPa
 
     @Override
     protected void handle(FiguraUser sender, AvatarDataPacket packet) {
-        // TODO
-        //parent.avatarManager().acceptAvatarDataChunk(sender.uuid(), packet.streamId(), packet.avatarData(), packet.finalChunk());
+        parent.avatarManager().acceptAvatarChunk(sender, packet.streamId(), packet.avatarData(), packet.finalChunk());
     }
 
     @Override
