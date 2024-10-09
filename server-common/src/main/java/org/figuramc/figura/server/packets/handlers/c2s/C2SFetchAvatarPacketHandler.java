@@ -10,7 +10,7 @@ import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Utils;
 
 public class C2SFetchAvatarPacketHandler extends AuthorizedC2SPacketHandler<C2SFetchAvatarPacket> {
-    protected C2SFetchAvatarPacketHandler(FiguraServer parent) {
+    public C2SFetchAvatarPacketHandler(FiguraServer parent) {
         super(parent);
     }
 

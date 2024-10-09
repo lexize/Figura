@@ -16,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class C2SFetchUserdataPacketHandler extends AuthorizedC2SPacketHandler<C2SFetchUserdataPacket> {
 
-    protected C2SFetchUserdataPacketHandler(FiguraServer parent) {
+    public C2SFetchUserdataPacketHandler(FiguraServer parent) {
         super(parent);
     }
 

@@ -13,7 +13,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class S2COwnedAvatarsPacket implements Packet {
     public static final Identifier PACKET_ID = new Identifier("figura", "owned_avatars");
-    // TODO packet id
     private final HashMap<String, UserdataAvatar> ownedAvatars;
 
     public S2COwnedAvatarsPacket(HashMap<String, UserdataAvatar> ownedAvatars) {

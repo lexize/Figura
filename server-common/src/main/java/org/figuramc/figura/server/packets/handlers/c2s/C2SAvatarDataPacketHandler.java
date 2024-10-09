@@ -5,8 +5,8 @@ import org.figuramc.figura.server.FiguraUser;
 import org.figuramc.figura.server.packets.AvatarDataPacket;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 
-public class C2SAvatarDataPacket extends AuthorizedC2SPacketHandler<AvatarDataPacket>{
-    protected C2SAvatarDataPacket(FiguraServer parent) {
+public class C2SAvatarDataPacketHandler extends AuthorizedC2SPacketHandler<AvatarDataPacket>{
+    public C2SAvatarDataPacketHandler(FiguraServer parent) {
         super(parent);
     }
 

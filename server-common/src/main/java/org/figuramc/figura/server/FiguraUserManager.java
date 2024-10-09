@@ -2,6 +2,7 @@ package org.figuramc.figura.server;
 
 import org.figuramc.figura.server.events.Events;
 import org.figuramc.figura.server.events.users.LoadPlayerDataEvent;
+import org.figuramc.figura.server.events.users.SavePlayerDataEvent;
 import org.figuramc.figura.server.events.users.UserLoadingExceptionEvent;
 import org.figuramc.figura.server.utils.Either;
 
@@ -11,7 +12,6 @@ import java.util.LinkedList;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-// TODO: Make FiguraUserManager also use CompletedFutures
 public final class FiguraUserManager {
     private final FiguraServer parent;
     private final HashMap<UUID, Either<FiguraUser, FutureHandle>> users = new HashMap<>();
@@ -75,7 +75,8 @@ public final class FiguraUserManager {
         users.computeIfPresent(player, (uuid, pl) -> {
             if (pl.isA()) {
                 FiguraUser user = pl.a();
-                user.save(parent.getUserdataFile(user.uuid()));
+                if (!Events.call(new SavePlayerDataEvent(user)).isCancelled())
+                    user.save(parent.getUserdataFile(user.uuid()));
                 user.setOffline();
                 return pl;
             }
@@ -90,7 +91,8 @@ public final class FiguraUserManager {
         for (var handle: users.values()) {
             if (handle.isA()) {
                 FiguraUser pl = handle.a();
-                pl.save(parent.getUserdataFile(pl.uuid()));
+                if (!Events.call(new SavePlayerDataEvent(pl)).isCancelled())
+                    pl.save(parent.getUserdataFile(pl.uuid()));
             }
         }
         users.clear();

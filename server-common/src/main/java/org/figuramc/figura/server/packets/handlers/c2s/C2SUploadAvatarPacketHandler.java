@@ -13,7 +13,7 @@ import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import java.util.concurrent.CompletableFuture;
 
 public class C2SUploadAvatarPacketHandler extends AuthorizedC2SPacketHandler<C2SUploadAvatarPacket> {
-    protected C2SUploadAvatarPacketHandler(FiguraServer parent) {
+    public C2SUploadAvatarPacketHandler(FiguraServer parent) {
         super(parent);
     }
 

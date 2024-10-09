@@ -4,13 +4,16 @@ import org.figuramc.figura.server.avatars.FiguraServerAvatarManager;
 import org.figuramc.figura.server.events.Events;
 import org.figuramc.figura.server.events.HandshakeEvent;
 import org.figuramc.figura.server.events.packets.OutcomingPacketEvent;
+import org.figuramc.figura.server.packets.AvatarDataPacket;
 import org.figuramc.figura.server.packets.Packet;
-import org.figuramc.figura.server.packets.handlers.c2s.C2SPacketHandler;
+import org.figuramc.figura.server.packets.c2s.*;
+import org.figuramc.figura.server.packets.handlers.c2s.*;
 import org.figuramc.figura.server.packets.s2c.S2CBackendHandshakePacket;
 import org.figuramc.figura.server.utils.Identifier;
 import org.figuramc.figura.server.utils.Utils;
 
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -24,6 +27,17 @@ public abstract class FiguraServer {
         if (INSTANCE != null) throw new IllegalStateException("Can't create more than one instance of FiguraServer");
         INSTANCE = this;
     }
+
+    private final HashMap<Identifier, C2SPacketHandler<?>> PACKET_HANDLERS = new HashMap<>() {{
+        put(C2SBackendHandshakePacket.PACKET_ID, new C2SHandshakeHandler(FiguraServer.this));
+        put(C2SFetchAvatarPacket.PACKET_ID, new C2SFetchAvatarPacketHandler(FiguraServer.this));
+        put(C2SFetchUserdataPacket.PACKET_ID, new C2SFetchUserdataPacketHandler(FiguraServer.this));
+        put(C2SUploadAvatarPacket.PACKET_ID, new C2SUploadAvatarPacketHandler(FiguraServer.this));
+        // TODO: FetchOwnedAvatarsPacketHandler
+        put(C2SDeleteAvatarPacket.PACKET_ID, new C2SDeleteAvatarPacketHandler(FiguraServer.this));
+
+        put(AvatarDataPacket.PACKET_ID, new C2SAvatarDataPacketHandler(FiguraServer.this));
+    }};
 
     public static FiguraServer getInstance() {
         return INSTANCE;
@@ -55,10 +69,13 @@ public abstract class FiguraServer {
     }
 
     public final void init() {
-
+        getUsersFolder().toFile().mkdirs();
+        getAvatarsFolder().toFile().mkdirs();
     }
 
     public final void close() {
+        avatarManager.close();
+        userManager.close();
         INSTANCE = null;
     }
 

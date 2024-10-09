@@ -66,6 +66,7 @@ public final class FiguraServerAvatarManager {
                 saveMetadata(hash, handle.metadata.a());
             }
         });
+        avatars.clear();
     }
 
     public static class AvatarData {
@@ -146,10 +147,6 @@ public final class FiguraServerAvatarManager {
 
         public Hash getEquippedEHash(UUID owner) {
             return owners.get(owner);
-        }
-
-        private static AvatarMetadata fromJsonBytes(byte[] bytes) {
-            return null; // TODO
         }
 
         public static AvatarMetadata read(byte[] bytes) {
