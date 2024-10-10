@@ -484,7 +484,7 @@ public final class FiguraServerAvatarManager {
         public void acceptChunk(UUID uuid, int streamId, byte[] data, boolean finalChunk) {
             var key = new IncomingAvatarKey(uuid, streamId);
             if (!streams.containsKey(key)) {
-                parent.sendPacket(uuid, new CloseIncomingStreamPacket(streamId));
+                parent.sendPacket(uuid, new CloseIncomingStreamPacket(streamId, (short) 301));
                 return;
             }
 
@@ -518,7 +518,7 @@ public final class FiguraServerAvatarManager {
                 // In case if avatar size is exceeded - closing the stream and removing it from handler.
                 if (size > parent.config().avatarSizeLimit() &&
                     !Events.call(new AvatarUploadSizeExceedEvent(uploader, size)).isCancelled()) {
-                    close();
+                    close((short) 302);
                     return true;
                 }
                 dataChunks.add(chunk);
@@ -535,6 +535,7 @@ public final class FiguraServerAvatarManager {
                     // Closing this stream is not required as client should've done it by itself
                     if (!dataHash.equals(hash)) {
                         Events.call(new InvalidIncomingAvatarHashEvent(hash, dataHash));
+                        parent.sendPacket(uploader, new CloseIncomingStreamPacket(streamId, (short) 303));
                         return true;
                     }
 
@@ -573,13 +574,13 @@ public final class FiguraServerAvatarManager {
                 return false;
             }
 
-            private void close() {
-                parent.sendPacket(uploader, new CloseIncomingStreamPacket(streamId));
+            private void close(short code) {
+                parent.sendPacket(uploader, new CloseIncomingStreamPacket(streamId, code));
             }
 
             private void finish(boolean uploadingFinisher) {
                 // Immediately closing our stream if the user is not the one who finished uploading earlier
-                if (!uploadingFinisher) close();
+                close((short) 100);
                 finished = true;
                 CompletableFuture<? extends Packet> future = parent.userManager().getUser(uploader)
                         .thenApplyAsync( u -> {

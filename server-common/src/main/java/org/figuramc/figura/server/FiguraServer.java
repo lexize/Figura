@@ -18,10 +18,10 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public abstract class FiguraServer {
-    private static FiguraServer INSTANCE;
+    protected static FiguraServer INSTANCE;
     private final FiguraUserManager userManager = new FiguraUserManager(this);
     private final FiguraServerAvatarManager avatarManager = new FiguraServerAvatarManager(this);
-    private FiguraServerConfig config;
+    private final FiguraServerConfig config = new FiguraServerConfig();
     private final DeferredPacketsQueue deferredPacketsQueue = new DeferredPacketsQueue(this);
     protected FiguraServer() {
         if (INSTANCE != null) throw new IllegalStateException("Can't create more than one instance of FiguraServer");
@@ -34,6 +34,7 @@ public abstract class FiguraServer {
         put(C2SFetchUserdataPacket.PACKET_ID, new C2SFetchUserdataPacketHandler(FiguraServer.this));
         put(C2SUploadAvatarPacket.PACKET_ID, new C2SUploadAvatarPacketHandler(FiguraServer.this));
         // TODO: FetchOwnedAvatarsPacketHandler
+        // TODO: C2SPingPacketHandler
         put(C2SDeleteAvatarPacket.PACKET_ID, new C2SDeleteAvatarPacketHandler(FiguraServer.this));
 
         put(AvatarDataPacket.PACKET_ID, new C2SAvatarDataPacketHandler(FiguraServer.this));
@@ -44,9 +45,6 @@ public abstract class FiguraServer {
     }
 
     public abstract Path getFiguraFolder();
-
-    public abstract void registerHandler(Identifier packetId, C2SPacketHandler<?> handler);
-    public abstract void unregisterHandler(Identifier packetId);
 
     public Path getUsersFolder() {
         return getFiguraFolder().resolve("users");
@@ -69,8 +67,13 @@ public abstract class FiguraServer {
     }
 
     public final void init() {
+        // TODO: reading config
         getUsersFolder().toFile().mkdirs();
         getAvatarsFolder().toFile().mkdirs();
+    }
+
+    public final C2SPacketHandler<Packet> getPacketHandler(Identifier id) {
+        return (C2SPacketHandler<Packet>) PACKET_HANDLERS.get(id);
     }
 
     public final void close() {
@@ -79,7 +82,7 @@ public abstract class FiguraServer {
         INSTANCE = null;
     }
 
-    protected final void tick() {
+    public final void tick() {
         deferredPacketsQueue.tick();
         avatarManager.tick();
     }

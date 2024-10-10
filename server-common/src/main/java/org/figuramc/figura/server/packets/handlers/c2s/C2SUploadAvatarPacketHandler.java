@@ -21,7 +21,7 @@ public class C2SUploadAvatarPacketHandler extends AuthorizedC2SPacketHandler<C2S
     protected void handle(FiguraUser sender, C2SUploadAvatarPacket packet) {
         sender.sendDeferredPacket(parent.avatarManager().avatarExists(packet.hash()).thenApplyAsync(avatarExists -> {
             if (avatarExists) {
-                return new CloseIncomingStreamPacket(packet.streamId());
+                return new CloseIncomingStreamPacket(packet.streamId(), (short) 101);
             }
             else {
                 parent.avatarManager().receiveAvatar(sender, packet.avatarId(), packet.streamId(), packet.hash(), packet.ehash());
