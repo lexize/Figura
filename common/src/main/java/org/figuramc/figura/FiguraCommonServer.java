@@ -9,11 +9,14 @@ import net.minecraft.server.level.ServerPlayer;
 import org.figuramc.figura.server.FiguraServer;
 import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.utils.FriendlyByteBufWrapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.util.UUID;
 
 public class FiguraCommonServer extends FiguraServer {
+    public static final Logger LOGGER = LoggerFactory.getLogger("Figura Server");
     private final MinecraftServer parent;
     public FiguraCommonServer(MinecraftServer parent) {
         this.parent = parent;

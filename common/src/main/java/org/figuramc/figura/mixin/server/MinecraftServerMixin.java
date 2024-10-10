@@ -18,12 +18,16 @@ public class MinecraftServerMixin {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/server/MinecraftServer;buildServerStatus()Lnet/minecraft/network/protocol/status/ServerStatus;", ordinal = 0))
     private void onServerStart(CallbackInfo ci) {
         figura$fsb = new FiguraCommonServer((MinecraftServer) (Object)this);
+        FiguraCommonServer.LOGGER.info("Initializing FSB");
         figura$fsb.init();
+        FiguraCommonServer.LOGGER.info("FSB initialization complete.");
     }
 
     @Inject(method = "stopServer", at = @At("HEAD"))
     private void onServerStop(CallbackInfo ci) {
+        FiguraCommonServer.LOGGER.info("Closing FSB");
         figura$fsb.close();
+        FiguraCommonServer.LOGGER.info("FSB successfully closed");
     }
 
     @Inject(method = "tickServer", at = @At("HEAD"))
