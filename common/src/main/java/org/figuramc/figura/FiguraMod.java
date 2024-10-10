@@ -86,8 +86,10 @@ public class FiguraMod {
         popPushProfiler("files");
         LocalAvatarLoader.tick();
         LocalAvatarFetcher.tick();
-        popPushProfiler("avatars");
-        AvatarManager.tickLoadedAvatars();
+        if (Minecraft.getInstance().player != null) {
+            popPushProfiler("avatars");
+            AvatarManager.tickLoadedAvatars();
+        }
         popPushProfiler("chatPrint");
         FiguraLuaPrinter.printChatFromQueue();
         popPushProfiler("emojiAnim");

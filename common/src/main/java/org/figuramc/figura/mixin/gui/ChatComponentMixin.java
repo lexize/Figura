@@ -30,7 +30,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
-@Mixin(ChatComponent.class)
+// 400 Priority is used as messages must be modified before ChatPatches tries to.
+@Mixin(value = ChatComponent.class, priority = 400)
 public class ChatComponentMixin {
 
     @Unique private Integer color;

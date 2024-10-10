@@ -271,7 +271,7 @@ public class AvatarWizard {
         if (hasCape) {
             Group cape = model.addGroup(Cape, FiguraVec3.of(0, 24, 2), root);
             Cube cube = model.addCube("Cape", FiguraVec3.of(-5, 8, 2), FiguraVec3.of(10, 16, 1), cape);
-            cube.generateBoxFaces(0, 0, capeTex, 1, hasPlayer ? 2 : 1);
+            cube.generateBoxFaces(0, 0, capeTex, 1, 1);
         }
 
         //elytra
@@ -282,13 +282,13 @@ public class AvatarWizard {
             Group leftElytra = model.addGroup(LeftElytra, FiguraVec3.of(-5, 24, 2), elytra);
             Cube cube = model.addCube(FiguraVec3.of(-5, 4, 2), FiguraVec3.of(10, 20, 2), leftElytra);
             cube.inflate = 1;
-            cube.generateBoxFaces(22, 0, capeTex, 1, hasPlayer ? 2 : 1);
+            cube.generateBoxFaces(22, 0, capeTex, 1, 1);
 
             //right wing
             Group rightElytra = model.addGroup(RightElytra, FiguraVec3.of(5, 24, 2), elytra);
             cube = model.addCube(FiguraVec3.of(-5, 4, 2), FiguraVec3.of(10, 20, 2), rightElytra);
             cube.inflate = 1;
-            cube.generateBoxFaces(22, 0, capeTex, -1, hasPlayer ? 2 : 1);
+            cube.generateBoxFaces(22, 0, capeTex, -1, 1);
         }
 
         //pivots

@@ -101,7 +101,7 @@ public class TextureAPI {
             image = NativeImage.read(null, bais);
             bais.close();
         } catch (Exception e) {
-            throw new LuaError(e.getMessage());
+            throw new LuaError("Could not read image: " + e.getMessage());
         }
 
         return register(name, image, false);

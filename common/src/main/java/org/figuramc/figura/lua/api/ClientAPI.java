@@ -42,6 +42,8 @@ import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaValue;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.function.Supplier;
@@ -367,14 +369,21 @@ public class ClientAPI {
     public static String getShaderPackName() {
         try {
             if (HAS_IRIS) {
-                return net.coderbot.iris.Iris.getCurrentPackName();
+                Method shaderNameField = Class.forName("net.coderbot.iris.Iris").getMethod("getCurrentPackName");
+                shaderNameField.setAccessible(true);
+                return shaderNameField.invoke(null).toString();
             } else if (OPTIFINE_LOADED.get()) {
                 Field shaderNameField = Class.forName("net.optifine.shaders.Shaders").getField("currentShaderName");
                 Class<?> shaderClass = shaderNameField.getType();
                 if (shaderClass == String.class)
                     return (String) shaderNameField.get(null);
             }
-        }catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException ignored) {
+        } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException |
+                 InvocationTargetException | NoSuchMethodException ignored) {
+           try {
+               return net.irisshaders.iris.Iris.getCurrentPackName();
+           }catch (Exception ignored1) {
+           }
         }
         return "";
     }

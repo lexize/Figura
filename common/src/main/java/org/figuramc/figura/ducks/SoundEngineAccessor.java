@@ -17,4 +17,5 @@ public interface SoundEngineAccessor {
     float figura$getVolume(SoundSource category);
     SoundBufferLibrary figura$getSoundBuffers();
     boolean figura$isPlaying(UUID owner);
+    boolean figura$isEngineActive();
 }
