@@ -1,21 +1,28 @@
 package org.figuramc.figura.backend2;
 
-import com.mojang.datafixers.util.Pair;
 import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket;
 import net.minecraft.resources.ResourceLocation;
 import org.figuramc.figura.avatar.UserData;
+import org.figuramc.figura.server.avatars.EHashPair;
 import org.figuramc.figura.server.packets.Packet;
+import org.figuramc.figura.server.packets.c2s.C2SDeleteAvatarPacket;
+import org.figuramc.figura.server.packets.c2s.C2SEquipAvatarsPacket;
+import org.figuramc.figura.server.packets.c2s.C2SFetchUserdataPacket;
 import org.figuramc.figura.server.packets.s2c.S2CBackendHandshakePacket;
+import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.utils.FriendlyByteBufWrapper;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
 public class FSB {
     private static S2CHandshake s2CHandshake;
+    private static final HashMap<UUID, UserData> awaitingUserdata = new HashMap<>();
 
     public static boolean connected() {
         return s2CHandshake != null;
@@ -28,23 +35,29 @@ public class FSB {
     public static void handleHandshake(S2CBackendHandshakePacket packet) {
         s2CHandshake =
                 new S2CHandshake(packet.avatars(), packet.pings(), packet.maxAvatarSize(), packet.maxAvatarsCount(), packet.pingsRateLimit(), packet.pingsSizeLimit());
-        // TODO: Proper handshake handling
+        // TODO Make this function work when Paladin will make stuff
     }
 
     public static void getUser(UserData userData) {
         // TODO
+        sendPacket(new C2SFetchUserdataPacket(userData.id));
+        awaitingUserdata.put(userData.id, userData);
     }
 
     public static void uploadAvatar(String avatarId, byte[] avatarData) {
-        // TODO
+        // TODO Avatar streaming
     }
 
     public static void deleteAvatar(String avatarId) {
-        // TODO
+        sendPacket(new C2SDeleteAvatarPacket(avatarId));
     }
 
-    public static void equipAvatars(List<Pair<UUID, String>> avatars) {
-        // TODO
+    public static void equipAvatar(List<Hash> avatars) {
+        ArrayList<EHashPair> eHashPairs = new ArrayList<>();
+        for (Hash hash: avatars) {
+            eHashPairs.add(new EHashPair(hash, getEHash(hash)));
+        }
+        sendPacket(new C2SEquipAvatarsPacket(eHashPairs));
     }
 
     public static void onDisconnect() {
@@ -99,5 +112,9 @@ public class FSB {
         packet.write(new FriendlyByteBufWrapper(byteBuf));
         var resPath = new ResourceLocation(packet.getId().namespace(), packet.getId().path());
         Minecraft.getInstance().getConnection().send(new ServerboundCustomPayloadPacket(resPath, byteBuf));
+    }
+
+    public static Hash getEHash(Hash hash) {
+        return null; // TODO Make this function work when Paladin will make stuff
     }
 }

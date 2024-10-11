@@ -1,6 +1,6 @@
 package org.figuramc.figura.server.packets.s2c;
 
-import org.figuramc.figura.server.avatars.UserdataAvatar;
+import org.figuramc.figura.server.avatars.EHashPair;
 import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
@@ -18,9 +18,9 @@ public class S2CUserdataPacket implements Packet {
 
     private final UUID target;
     private final BitSet prideBadges;
-    private final HashMap<String, UserdataAvatar> avatars;
+    private final HashMap<String, EHashPair> avatars;
 
-    public S2CUserdataPacket(UUID target, BitSet prideBadges, HashMap<String, UserdataAvatar> avatars) {
+    public S2CUserdataPacket(UUID target, BitSet prideBadges, HashMap<String, EHashPair> avatars) {
         this.target = target;
         this.prideBadges = prideBadges;
         this.avatars = avatars;
@@ -35,7 +35,7 @@ public class S2CUserdataPacket implements Packet {
             String avatarId = new String(byteBuf.readByteArray(Integer.MAX_VALUE), UTF_8);
             Hash hash = byteBuf.readHash();
             Hash ehash = byteBuf.readHash();
-            avatars.put(avatarId, new UserdataAvatar(hash, ehash));
+            avatars.put(avatarId, new EHashPair(hash, ehash));
         }
     }
 
@@ -47,7 +47,7 @@ public class S2CUserdataPacket implements Packet {
         return prideBadges;
     }
 
-    public HashMap<String, UserdataAvatar> avatars() {
+    public HashMap<String, EHashPair> avatars() {
         return avatars;
     }
 
@@ -56,7 +56,7 @@ public class S2CUserdataPacket implements Packet {
         byteBuf.writeUUID(target);
         byteBuf.writeByteArray(prideBadges.toByteArray());
         byteBuf.writeVarInt(avatars.size());
-        for (Map.Entry<String, UserdataAvatar> avatar: avatars.entrySet()) {
+        for (Map.Entry<String, EHashPair> avatar: avatars.entrySet()) {
             byteBuf.writeByteArray(avatar.getKey().getBytes(UTF_8));
             byteBuf.writeBytes(avatar.getValue().hash().get());
             byteBuf.writeBytes(avatar.getValue().ehash().get());

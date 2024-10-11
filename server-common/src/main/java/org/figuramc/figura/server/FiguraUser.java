@@ -1,6 +1,6 @@
 package org.figuramc.figura.server;
 
-import org.figuramc.figura.server.avatars.UserdataAvatar;
+import org.figuramc.figura.server.avatars.EHashPair;
 import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
@@ -21,11 +21,11 @@ public final class FiguraUser {
     private boolean avatars;
     private final PingCounter pingCounter = new PingCounter();
     private final BitSet prideBadges;
-    private final HashMap<String, UserdataAvatar> equippedAvatars;
+    private final HashMap<String, EHashPair> equippedAvatars;
 
-    private final HashMap<String, UserdataAvatar> ownedAvatars;
+    private final HashMap<String, EHashPair> ownedAvatars;
 
-    public FiguraUser(UUID player, boolean online, boolean allowPings, boolean allowAvatars, BitSet prideBadges, HashMap<String, UserdataAvatar> equippedAvatars, HashMap<String, UserdataAvatar> ownedAvatars) {
+    public FiguraUser(UUID player, boolean online, boolean allowPings, boolean allowAvatars, BitSet prideBadges, HashMap<String, EHashPair> equippedAvatars, HashMap<String, EHashPair> ownedAvatars) {
         this.player = player;
         this.online = online;
         this.pings = allowPings;
@@ -63,11 +63,11 @@ public final class FiguraUser {
         return prideBadges;
     }
 
-    public HashMap<String, UserdataAvatar> equippedAvatars() {
+    public HashMap<String, EHashPair> equippedAvatars() {
         return equippedAvatars;
     }
 
-    public HashMap<String, UserdataAvatar> ownedAvatars() {
+    public HashMap<String, EHashPair> ownedAvatars() {
         return ownedAvatars;
     }
 
@@ -122,29 +122,29 @@ public final class FiguraUser {
     public static FiguraUser load(UUID player, IFriendlyByteBuf buf) {
         BitSet prideBadges = BitSet.valueOf(buf.readByteArray(256));
         int equippedAvatarsCount = buf.readVarInt();
-        HashMap<String, UserdataAvatar> equippedAvatars = new HashMap<>();
+        HashMap<String, EHashPair> equippedAvatars = new HashMap<>();
         for (int i = 0; i < equippedAvatarsCount; i++) {
             String id = new String(buf.readByteArray(256), UTF_8);
             Hash hash = buf.readHash();
             Hash ehash = buf.readHash();
-            equippedAvatars.put(id, new UserdataAvatar(hash, ehash));
+            equippedAvatars.put(id, new EHashPair(hash, ehash));
         }
-        HashMap<String, UserdataAvatar> ownedAvatars = new HashMap<>();
+        HashMap<String, EHashPair> ownedAvatars = new HashMap<>();
         int ownedAvatarsCount = buf.readVarInt();
         for (int i = 0; i < ownedAvatarsCount; i++) {
             String id = new String(buf.readByteArray(256), UTF_8);
             Hash hash = buf.readHash();
             Hash ehash = buf.readHash();
-            ownedAvatars.put(id, new UserdataAvatar(hash, ehash));
+            ownedAvatars.put(id, new EHashPair(hash, ehash));
         }
         return new FiguraUser(player, false, false, false, prideBadges, equippedAvatars, ownedAvatars);
     }
 
     public Hash findEHash(Hash hash) {
-        for (UserdataAvatar pair: equippedAvatars.values()) {
+        for (EHashPair pair: equippedAvatars.values()) {
             if (pair.hash().equals(hash)) return pair.ehash();
         }
-        for (UserdataAvatar pair: ownedAvatars.values()) {
+        for (EHashPair pair: ownedAvatars.values()) {
             if (pair.hash().equals(hash)) return pair.ehash();
         }
         return null;
@@ -168,7 +168,7 @@ public final class FiguraUser {
             return CompletableFuture.completedFuture(null);
         }
         else {
-            UserdataAvatar avatar = ownedAvatars.remove(avatarId);
+            EHashPair avatar = ownedAvatars.remove(avatarId);
             return FiguraServer.getInstance().avatarManager().getAvatarMetadata(avatar.hash()).thenAcceptAsync(m -> {
                  m.owners().remove(this.uuid());
             });
@@ -180,7 +180,7 @@ public final class FiguraUser {
             return CompletableFuture.completedFuture(null);
         }
         else {
-            UserdataAvatar avatar = equippedAvatars.remove(avatarId);
+            EHashPair avatar = equippedAvatars.remove(avatarId);
             return FiguraServer.getInstance().avatarManager().getAvatarMetadata(avatar.hash()).thenAcceptAsync(m -> {
                 m.owners().remove(uuid());
             });
@@ -189,14 +189,14 @@ public final class FiguraUser {
 
     public CompletableFuture<Void> replaceOrAddOwnedAvatar(String avatarId, Hash hash, Hash ehash) {
         return removeOwnedAvatar(avatarId).thenRunAsync(() -> {
-            ownedAvatars.put(avatarId, new UserdataAvatar(hash, ehash));
+            ownedAvatars.put(avatarId, new EHashPair(hash, ehash));
             FiguraServer.getInstance().avatarManager().getAvatarMetadata(hash).join().owners().put(uuid(), ehash);
         });
     }
 
     public CompletableFuture<Void> replaceOrAddEquippedAvatar(String avatarId, Hash hash, Hash ehash) {
         return removeEquippedAvatar(avatarId).thenRunAsync(() -> {
-            equippedAvatars.put(avatarId, new UserdataAvatar(hash, ehash));
+            equippedAvatars.put(avatarId, new EHashPair(hash, ehash));
             FiguraServer.getInstance().avatarManager().getAvatarMetadata(hash).join().equipped().put(uuid(), ehash);
         });
     }

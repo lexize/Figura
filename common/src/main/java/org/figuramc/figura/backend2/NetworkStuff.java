@@ -35,8 +35,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.ByteBuffer;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -47,6 +45,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import static org.figuramc.figura.server.utils.Utils.getHash;
 
 public class NetworkStuff {
 
@@ -351,6 +351,7 @@ public class NetworkStuff {
         });
     }
 
+    // TODO: multiple modes of upload (Backend, FSB, Backend + FSB)
     public static void uploadAvatar(Avatar avatar) {
         if (avatar == null || avatar.nbt == null)
             return;
@@ -373,7 +374,8 @@ public class NetworkStuff {
 
                 if (code == 200) {
                     //TODO - profile screen
-                    equipAvatar(List.of(Pair.of(avatar.owner, id)));
+                    if (FSB.avatars()) FSB.equipAvatar(List.of(getHash(baos.toByteArray())));
+                    else equipAvatar(List.of(Pair.of(avatar.owner, id)));
                     AvatarManager.localUploaded = true;
                 }
 
@@ -412,11 +414,6 @@ public class NetworkStuff {
     }
 
     public static void equipAvatar(List<Pair<UUID, String>> avatars) {
-        if (FSB.avatars()) {
-            FSB.equipAvatars(avatars);
-            return;
-        }
-
         JsonArray json = new JsonArray();
 
         for (Pair<UUID, String> avatar : avatars) {
