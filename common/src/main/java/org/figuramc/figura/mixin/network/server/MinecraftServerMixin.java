@@ -1,7 +1,7 @@
-package org.figuramc.figura.mixin.server;
+package org.figuramc.figura.mixin.network.server;
 
 import net.minecraft.server.MinecraftServer;
-import org.figuramc.figura.FiguraModServer;
+import org.figuramc.figura.server.FiguraModServer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;

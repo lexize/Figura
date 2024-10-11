@@ -96,8 +96,8 @@
     "sound.SubtitleOverlayMixin"
   ],
   "server": [
-    "server.ServerPlayNetworkingHandlerMixin",
-    "server.MinecraftServerMixin"
+    "network.server.ServerPlayNetworkingHandlerMixin",
+    "network.server.MinecraftServerMixin"
   ],
   "injectors": {
     "defaultRequire": 1
