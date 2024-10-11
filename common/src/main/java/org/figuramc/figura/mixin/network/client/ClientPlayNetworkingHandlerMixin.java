@@ -11,6 +11,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class ClientPlayNetworkingHandlerMixin {
     @Inject(method = "handleCustomPayload", at = @At("HEAD"))
     private void onCustomPayload(ClientboundCustomPayloadPacket packet, CallbackInfo ci) {
-        
+
     }
 }

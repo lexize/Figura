@@ -296,6 +296,11 @@ public class NetworkStuff {
         if (checkUUID(user.id))
             return;
 
+        if (FSB.avatars()) {
+            FSB.getUser(user);
+            return;
+        }
+
         queueString(user.id, api -> api.getUser(user.id), (code, data) -> {
             //debug
             responseDebug("getUser", code, data);
@@ -352,9 +357,17 @@ public class NetworkStuff {
 
         String id = avatar.id == null || true ? "avatar" : avatar.id; //TODO - profile screen
 
+
+
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             NbtIo.writeCompressed(avatar.nbt, baos);
+
+            if (FSB.avatars()) {
+                FSB.uploadAvatar(id, baos.toByteArray());
+                return;
+            }
+
             queueString(Util.NIL_UUID, api -> api.uploadAvatar(id, baos.toByteArray()), (code, data) -> {
                 responseDebug("uploadAvatar", code, data);
 
@@ -381,6 +394,12 @@ public class NetworkStuff {
 
     public static void deleteAvatar(String avatar) {
         String id = avatar == null || true ? "avatar" : avatar; //TODO - profile screen
+
+        if (FSB.avatars()) {
+            FSB.deleteAvatar(id);
+            return;
+        }
+
         queueString(Util.NIL_UUID, api -> api.deleteAvatar(id), (code, data) -> {
             responseDebug("deleteAvatar", code, data);
 
@@ -393,6 +412,11 @@ public class NetworkStuff {
     }
 
     public static void equipAvatar(List<Pair<UUID, String>> avatars) {
+        if (FSB.avatars()) {
+            FSB.equipAvatars(avatars);
+            return;
+        }
+
         JsonArray json = new JsonArray();
 
         for (Pair<UUID, String> avatar : avatars) {
@@ -412,6 +436,10 @@ public class NetworkStuff {
     public static void getAvatar(UserData target, UUID owner, String id, String hash) {
         if (checkUUID(target.id))
             return;
+
+        if (FSB.avatars()) {
+            FSB.getAvatar(target, hash);
+        }
 
         queueStream(target.id, api -> api.getAvatar(owner, id), (code, stream) -> {
             String s;
