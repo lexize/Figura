@@ -54,12 +54,12 @@ public final class FiguraUserManager {
         return future;
     }
 
-    public CompletableFuture<Void> setupOnlinePlayer(UUID uuid, boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
+    public CompletableFuture<Void> setupOnlinePlayer(UUID uuid, boolean allowPings, boolean allowAvatars) {
         CompletableFuture<FiguraUser> user = getUser(uuid);
         expectedUsers.remove(uuid); // This is called either way just to remove it in case if it was first time initialization
         return user.thenAcceptAsync(u -> {
             u.setOnline();
-            u.update(allowPings, allowAvatars, s2cChunkSize);
+            u.update(allowPings, allowAvatars);
         });
     }
 

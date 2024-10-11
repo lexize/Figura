@@ -19,19 +19,17 @@ public final class FiguraUser {
     private boolean online;
     private boolean pings;
     private boolean avatars;
-    private int s2cChunkSize;
     private final PingCounter pingCounter = new PingCounter();
     private final BitSet prideBadges;
     private final HashMap<String, UserdataAvatar> equippedAvatars;
 
     private final HashMap<String, UserdataAvatar> ownedAvatars;
 
-    public FiguraUser(UUID player, boolean online, boolean allowPings, boolean allowAvatars, int s2cChunkSize, BitSet prideBadges, HashMap<String, UserdataAvatar> equippedAvatars, HashMap<String, UserdataAvatar> ownedAvatars) {
+    public FiguraUser(UUID player, boolean online, boolean allowPings, boolean allowAvatars, BitSet prideBadges, HashMap<String, UserdataAvatar> equippedAvatars, HashMap<String, UserdataAvatar> ownedAvatars) {
         this.player = player;
         this.online = online;
         this.pings = allowPings;
         this.avatars = allowAvatars;
-        this.s2cChunkSize = s2cChunkSize;
         this.prideBadges = prideBadges;
         this.equippedAvatars = equippedAvatars;
         this.ownedAvatars = ownedAvatars;
@@ -51,10 +49,6 @@ public final class FiguraUser {
 
     public boolean avatarsAllowed() {
         return avatars;
-    }
-
-    public int s2cChunkSize() {
-        return s2cChunkSize;
     }
 
     public boolean pingsAllowed() {
@@ -119,7 +113,7 @@ public final class FiguraUser {
             InputStreamByteBuf buf = new InputStreamByteBuf(fis);
             return load(player, buf);
         } catch (FileNotFoundException e) {
-            return new FiguraUser(player, true, false, false, 0, new BitSet(), new HashMap<>(), new HashMap<>());
+            return new FiguraUser(player, true, false, false, new BitSet(), new HashMap<>(), new HashMap<>());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -143,7 +137,7 @@ public final class FiguraUser {
             Hash ehash = buf.readHash();
             ownedAvatars.put(id, new UserdataAvatar(hash, ehash));
         }
-        return new FiguraUser(player, false, false, false, 0, prideBadges, equippedAvatars, ownedAvatars);
+        return new FiguraUser(player, false, false, false, prideBadges, equippedAvatars, ownedAvatars);
     }
 
     public Hash findEHash(Hash hash) {
@@ -156,10 +150,9 @@ public final class FiguraUser {
         return null;
     }
 
-    public void update(boolean allowPings, boolean allowAvatars, int s2cChunkSize) {
+    public void update(boolean allowPings, boolean allowAvatars) {
         this.pings = allowPings;
         this.avatars = allowAvatars;
-        this.s2cChunkSize = s2cChunkSize;
     }
 
     public void setOnline() {

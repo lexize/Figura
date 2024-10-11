@@ -10,8 +10,6 @@ public final class FiguraServerConfig {
     private int avatarSizeLimit = 102400;
     private int avatarsCountLimit = 1;
 
-    private int maxOutcomingChunkSize = 50000;
-
     public boolean pings() {
         return pings;
     }
@@ -34,9 +32,5 @@ public final class FiguraServerConfig {
 
     public int avatarsCountLimit() {
         return avatarsCountLimit;
-    }
-
-    public int s2cChunkSize() {
-        return maxOutcomingChunkSize;
     }
 }

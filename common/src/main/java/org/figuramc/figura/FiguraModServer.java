@@ -15,10 +15,10 @@ import org.slf4j.LoggerFactory;
 import java.nio.file.Path;
 import java.util.UUID;
 
-public class FiguraCommonServer extends FiguraServer {
+public class FiguraModServer extends FiguraServer {
     public static final Logger LOGGER = LoggerFactory.getLogger("Figura Server");
     private final MinecraftServer parent;
-    public FiguraCommonServer(MinecraftServer parent) {
+    public FiguraModServer(MinecraftServer parent) {
         this.parent = parent;
     }
 
@@ -39,7 +39,7 @@ public class FiguraCommonServer extends FiguraServer {
         }
     }
 
-    public static FiguraCommonServer getInstance() {
-        return (FiguraCommonServer) INSTANCE;
+    public static FiguraModServer getInstance() {
+        return (FiguraModServer) INSTANCE;
     }
 }

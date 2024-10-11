@@ -207,23 +207,12 @@ public final class FiguraServerAvatarManager {
             this.ehash = ehash;
         }
 
-        private int getChunkSize() {
-            var inst = FiguraServer.getInstance();
-            var user = inst.userManager().getUser(receiver).join();
-            int serverLimit = inst.config().s2cChunkSize();
-            int maxServerLimit = serverLimit <= 0 ? AvatarDataPacket.MAX_CHUNK_SIZE : serverLimit;
-            int clientLimit = user.s2cChunkSize();
-            int maxClientLimit = clientLimit <= 0 ? AvatarDataPacket.MAX_CHUNK_SIZE : clientLimit;
-
-            return Math.min(maxClientLimit, maxServerLimit);
-        }
-
         public void tick() {
             var inst = FiguraServer.getInstance();
             if (streamPosition == 0) {
                 inst.sendPacket(receiver, new S2CInitializeAvatarStreamPacket(streamId, hash, ehash));
             }
-            int chunkSize = getChunkSize();
+            int chunkSize = AvatarDataPacket.MAX_CHUNK_SIZE;
             byte[] data = source.data();
             byte[] chunk = new byte[Math.min(chunkSize, data.length - streamPosition)];
             System.arraycopy(source.data(), streamPosition, chunk, 0, chunk.length);
