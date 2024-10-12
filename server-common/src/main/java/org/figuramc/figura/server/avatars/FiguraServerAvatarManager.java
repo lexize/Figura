@@ -7,9 +7,7 @@ import org.figuramc.figura.server.events.avatars.*;
 import org.figuramc.figura.server.exceptions.HashNotMatchingException;
 import org.figuramc.figura.server.packets.AvatarDataPacket;
 import org.figuramc.figura.server.packets.CloseIncomingStreamPacket;
-import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.server.packets.s2c.S2CInitializeAvatarStreamPacket;
-import org.figuramc.figura.server.packets.s2c.S2COwnedAvatarsPacket;
 import org.figuramc.figura.server.utils.*;
 
 import java.io.*;
@@ -197,7 +195,7 @@ public final class FiguraServerAvatarManager {
         private final int streamId;
         private final Hash hash;
         private final Hash ehash;
-        private int streamPosition = 0;
+        private int position = 0;
 
         private AvatarOutcomingStream(UUID receiver, AvatarData source, int streamId, Hash hash, Hash ehash) {
             this.receiver = receiver;
@@ -208,20 +206,26 @@ public final class FiguraServerAvatarManager {
         }
 
         public void tick() {
-            var inst = FiguraServer.getInstance();
-            if (streamPosition == 0) {
-                inst.sendPacket(receiver, new S2CInitializeAvatarStreamPacket(streamId, hash, ehash));
+            if (!canBeClosed()) {
+                var inst = FiguraServer.getInstance();
+                if (position == 0) {
+                    inst.sendPacket(receiver, new S2CInitializeAvatarStreamPacket(streamId, hash, ehash));
+                }
+                int chunkSize = nextChunkSize();
+                byte[] data = source.data();
+                byte[] chunk = new byte[chunkSize];
+                System.arraycopy(data, position, chunk, 0, chunk.length);
+                position += chunkSize;
+                inst.sendPacket(receiver, new AvatarDataPacket(streamId, canBeClosed(), chunk));
             }
-            int chunkSize = AvatarDataPacket.MAX_CHUNK_SIZE;
-            byte[] data = source.data();
-            byte[] chunk = new byte[Math.min(chunkSize, data.length - streamPosition)];
-            System.arraycopy(source.data(), streamPosition, chunk, 0, chunk.length);
-            streamPosition += chunkSize;
-            inst.sendPacket(receiver, new AvatarDataPacket(streamId, canBeClosed(), chunk));
         }
 
         public boolean canBeClosed() {
-            return streamPosition == source.data().length;
+            return position == source.data().length;
+        }
+
+        private int nextChunkSize() {
+            return Math.min(AvatarDataPacket.MAX_CHUNK_SIZE, source.data().length - position);
         }
 
         @Override

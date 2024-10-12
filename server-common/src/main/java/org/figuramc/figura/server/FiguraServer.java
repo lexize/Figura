@@ -10,6 +10,7 @@ import org.figuramc.figura.server.packets.c2s.*;
 import org.figuramc.figura.server.packets.handlers.c2s.*;
 import org.figuramc.figura.server.packets.s2c.S2CBackendHandshakePacket;
 import org.figuramc.figura.server.utils.Identifier;
+import org.figuramc.figura.server.utils.Pair;
 import org.figuramc.figura.server.utils.Utils;
 
 import java.nio.file.Path;
@@ -34,7 +35,6 @@ public abstract class FiguraServer {
         put(C2SFetchUserdataPacket.PACKET_ID, new C2SFetchUserdataPacketHandler(FiguraServer.this));
         put(C2SUploadAvatarPacket.PACKET_ID, new C2SUploadAvatarPacketHandler(FiguraServer.this));
         put(C2SEquipAvatarsPacket.PACKET_ID, new C2SEquipAvatarPacketHandler(FiguraServer.this));
-        // TODO: C2SPingPacketHandler
         put(C2SDeleteAvatarPacket.PACKET_ID, new C2SDeleteAvatarPacketHandler(FiguraServer.this));
 
         put(AvatarDataPacket.PACKET_ID, new C2SAvatarDataPacketHandler(FiguraServer.this));
@@ -94,10 +94,8 @@ public abstract class FiguraServer {
         if (!event.isCancelled()) {
             userManager.expect(receiver);
             sendPacket(receiver, new S2CBackendHandshakePacket(
-                    config.pings(),
                     config.pingsRateLimit(),
                     config.pingsSizeLimit(),
-                    config.avatars(),
                     config.avatarSizeLimit(),
                     config.avatarsCountLimit()
             ));
@@ -117,7 +115,6 @@ public abstract class FiguraServer {
         OutcomingPacketEvent event = new OutcomingPacketEvent(receiver, packet);
         Events.call(event);
         if (!event.isCancelled()) {
-            logInfo("Sending packet %s to %s".formatted(packet.getId(), receiver));
             sendPacketInternal(receiver, packet);
         }
     }

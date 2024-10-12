@@ -1,36 +1,38 @@
-package org.figuramc.figura.server.packets.c2s;
+package org.figuramc.figura.server.packets.s2c;
 
 import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Identifier;
 
-public class C2SPingPacket implements Packet {
-    public static final Identifier PACKET_ID = new Identifier("figura", "ping");
-    public static final int MAX_PING_SIZE = 32767 - 21; // Max size of ping that is possible to send
+import java.util.UUID;
 
+public class S2CPingPacket implements Packet {
+    public static final Identifier PACKET_ID = new Identifier("figura", "ping");
+
+    private final UUID sender;
     private final int id;
-    private final boolean sync;
     private final byte[] data;
 
-    public C2SPingPacket(int id, boolean sync, byte[] data) {
+    public S2CPingPacket(UUID sender, int id, byte[] data) {
+        this.sender = sender;
         this.id = id;
-        this.sync = sync;
         this.data = data;
     }
 
-    public C2SPingPacket(IFriendlyByteBuf buf) {
-        this.id = buf.readInt();
-        this.sync = buf.readByte() != 0;
-        this.data = buf.readBytes();
+    public S2CPingPacket(IFriendlyByteBuf buf) {
+        sender = buf.readUUID();
+        id = buf.readInt();
+        data = buf.readBytes();
+    }
+
+    public UUID sender() {
+        return sender;
     }
 
     public int id() {
         return id;
     }
 
-    public boolean sync() {
-        return sync;
-    }
 
     public byte[] data() {
         return data;
@@ -38,8 +40,8 @@ public class C2SPingPacket implements Packet {
 
     @Override
     public void write(IFriendlyByteBuf buf) {
+        buf.writeUUID(sender);
         buf.writeInt(id);
-        buf.writeByte(sync ? 1 : 0);
         buf.writeBytes(data);
     }
 

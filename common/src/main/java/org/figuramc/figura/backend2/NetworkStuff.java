@@ -23,6 +23,7 @@ import org.figuramc.figura.font.Emojis;
 import org.figuramc.figura.gui.FiguraToast;
 import org.figuramc.figura.permissions.PermissionManager;
 import org.figuramc.figura.permissions.Permissions;
+import org.figuramc.figura.server.packets.c2s.C2SPingPacket;
 import org.figuramc.figura.utils.FiguraText;
 import org.figuramc.figura.utils.RefilledNumber;
 import org.figuramc.figura.utils.TextUtils;
@@ -298,7 +299,7 @@ public class NetworkStuff {
         if (checkUUID(user.id))
             return;
 
-        if (FSB.avatars()) {
+        if (FSB.connected()) {
             FSB.getUser(user);
             return;
         }
@@ -366,7 +367,7 @@ public class NetworkStuff {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             NbtIo.writeCompressed(avatar.nbt, baos);
 
-            if (FSB.avatars()) {
+            if (FSB.connected()) {
                 FSB.uploadAvatar(id, baos.toByteArray());
                 return;
             }
@@ -376,7 +377,7 @@ public class NetworkStuff {
 
                 if (code == 200) {
                     //TODO - profile screen
-                    if (FSB.avatars()) FSB.equipAvatar(List.of(Pair.of(id, getHash(baos.toByteArray()))));
+                    if (FSB.connected()) FSB.equipAvatar(List.of(Pair.of(id, getHash(baos.toByteArray()))));
                     else equipAvatar(List.of(Pair.of(avatar.owner, id)));
                     AvatarManager.localUploaded = true;
                 }
@@ -399,7 +400,7 @@ public class NetworkStuff {
     public static void deleteAvatar(String avatar) {
         String id = avatar == null || true ? "avatar" : avatar; //TODO - profile screen
 
-        if (FSB.avatars()) {
+        if (FSB.connected()) {
             FSB.deleteAvatar(id);
             return;
         }
@@ -436,7 +437,7 @@ public class NetworkStuff {
         if (checkUUID(target.id))
             return;
 
-        if (FSB.avatars()) {
+        if (FSB.connected()) {
             FSB.getAvatar(target, hash);
         }
 
@@ -493,8 +494,11 @@ public class NetworkStuff {
             return;
 
         try {
-            ByteBuffer buffer = C2SMessageHandler.ping(id, sync, data);
-            ws.sendBinary(buffer.array());
+            if (!FSB.connected()) {
+                ByteBuffer buffer = C2SMessageHandler.ping(id, sync, data);
+                ws.sendBinary(buffer.array());
+            }
+            else FSB.sendPacket(new C2SPingPacket(id, sync, data));
 
             pingsSent++;
             if (lastPing == 0) lastPing = FiguraMod.ticks;

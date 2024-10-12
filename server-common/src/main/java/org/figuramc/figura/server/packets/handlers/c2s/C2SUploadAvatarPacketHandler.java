@@ -20,6 +20,9 @@ public class C2SUploadAvatarPacketHandler extends AuthorizedC2SPacketHandler<C2S
                 return new CloseIncomingStreamPacket(packet.streamId(), StatusCode.ALREADY_EXISTS);
             }
             else {
+                if (sender.getAvatarsCountWithId(packet.avatarId()) > parent.config().avatarsCountLimit()) {
+                    return new CloseIncomingStreamPacket(packet.streamId(), StatusCode.TOO_MANY_AVATARS);
+                }
                 parent.avatarManager().receiveAvatar(sender, packet.avatarId(), packet.streamId(), packet.hash(), packet.ehash());
                 return new AllowIncomingStreamPacket(packet.streamId());
             }

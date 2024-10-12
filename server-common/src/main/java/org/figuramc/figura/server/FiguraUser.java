@@ -174,7 +174,7 @@ public final class FiguraUser {
         else {
             EHashPair avatar = ownedAvatars.remove(avatarId);
             return FiguraServer.getInstance().avatarManager().getAvatarMetadata(avatar.hash()).thenAcceptAsync(m -> {
-                 m.owners().remove(this.uuid());
+                 m.owners().remove(uuid());
             });
         }
     }
@@ -205,7 +205,11 @@ public final class FiguraUser {
         });
     }
 
-    private static class PingCounter {
+    public int getAvatarsCountWithId(String avatarId) {
+        return ownedAvatars().size() + (ownedAvatars().containsKey(avatarId) ? 0 : 1);
+    }
+
+    public static class PingCounter {
         private int bytesSent; // Amount of total bytes sent in last 20 ticks
         private int pingsSent; // Amount of pings sent in last 20 ticks
 

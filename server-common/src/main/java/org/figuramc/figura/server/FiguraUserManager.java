@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 public final class FiguraUserManager {
     private final FiguraServer parent;
@@ -69,6 +70,14 @@ public final class FiguraUserManager {
         if (playerDataEvent.returned()) return playerDataEvent.returnValue();
         Path dataFile = parent.getUserdataFile(player);
         return CompletableFuture.supplyAsync(() -> FiguraUser.load(player, dataFile));
+    }
+
+    public void forEachUser(Consumer<FiguraUser> func) {
+        users.forEach((id, user) -> {
+            if (user.isA() && user.a().online()) {
+                func.accept(user.a());
+            }
+        });
     }
 
     public void onUserLeave(UUID player) {

@@ -30,7 +30,6 @@ public class C2SFetchUserdataPacketHandler extends AuthorizedC2SPacketHandler<C2
             // Collecting hashes for requested user
             for (Map.Entry<String, EHashPair> entry : u.equippedAvatars().entrySet()) {
                 Hash hash = entry.getValue().hash();
-                parent.logInfo("%s %s".formatted(entry.getKey(), hash));
                 Hash ehash = entry.getValue().ehash();
                 avatars.put(entry.getKey(), new EHashPair(hash, ehash));
             }
