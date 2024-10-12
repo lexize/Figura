@@ -5,32 +5,37 @@ import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Identifier;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 public class C2SEquipAvatarsPacket implements Packet {
     public static final Identifier PACKET_ID = new Identifier("figura", "avatars/equip");
-    private final ArrayList<EHashPair> avatars;
+    private final HashMap<String, EHashPair> avatars;
 
-    public C2SEquipAvatarsPacket(ArrayList<EHashPair> pairs) {
+    public C2SEquipAvatarsPacket(HashMap<String, EHashPair> pairs) {
         avatars = pairs;
     }
 
     public C2SEquipAvatarsPacket(IFriendlyByteBuf byteBuf) {
         int count = byteBuf.readByte();
-        ArrayList<EHashPair> pairs = new ArrayList<>();
+        HashMap<String, EHashPair> pairs = new HashMap<>();
         for (int i = 0; i < count; i++) {
-            pairs.add(new EHashPair(byteBuf.readHash(), byteBuf.readHash()));
+            pairs.put(new String(byteBuf.readByteArray(256)),
+                    new EHashPair(byteBuf.readHash(), byteBuf.readHash()));
         }
         avatars = pairs;
     }
 
+    public HashMap<String, EHashPair> avatars() {
+        return avatars;
+    }
+
     public void write(IFriendlyByteBuf byteBuf) {
         byteBuf.writeByte(avatars.size());
-        for (EHashPair pair: avatars) {
-            byteBuf.writeBytes(pair.hash().get());
-            byteBuf.writeBytes(pair.ehash().get());
+        for (Map.Entry<String, EHashPair> entry: avatars.entrySet()) {
+            byteBuf.writeByteArray(entry.getKey().getBytes(StandardCharsets.UTF_8));
+            byteBuf.writeBytes(entry.getValue().hash().get());
+            byteBuf.writeBytes(entry.getValue().ehash().get());
         }
     }
 

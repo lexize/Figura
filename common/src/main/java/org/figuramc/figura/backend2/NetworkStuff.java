@@ -202,8 +202,10 @@ public class NetworkStuff {
             disconnect(null);
 
         backendStatus = 2;
-        connectAPI(token);
-        connectWS(token);
+        if (!FSB.connected()) {
+            connectAPI(token);
+            connectWS(token);
+        }
     }
 
     private static void fetchMOTD() {
@@ -374,7 +376,7 @@ public class NetworkStuff {
 
                 if (code == 200) {
                     //TODO - profile screen
-                    if (FSB.avatars()) FSB.equipAvatar(List.of(getHash(baos.toByteArray())));
+                    if (FSB.avatars()) FSB.equipAvatar(List.of(Pair.of(id, getHash(baos.toByteArray()))));
                     else equipAvatar(List.of(Pair.of(avatar.owner, id)));
                     AvatarManager.localUploaded = true;
                 }
@@ -564,11 +566,11 @@ public class NetworkStuff {
 
 
     public static boolean isConnected() {
-        return api != null && checkWS();
+        return FSB.connected() || api != null && checkWS();
     }
 
     public static boolean canUpload() {
-        return isConnected() && uploadRate.check();
+        return isConnected() && uploadRate.check() || (FSB.connected());
     }
 
     public static int getSizeLimit() {

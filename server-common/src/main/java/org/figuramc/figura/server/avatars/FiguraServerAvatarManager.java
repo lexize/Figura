@@ -239,6 +239,7 @@ public final class FiguraServerAvatarManager {
 
     private void saveAvatar(Hash avatarHash, byte[] avatarData) {
         if (Events.call(new StoreAvatarDataEvent(avatarData, avatarHash)).isCancelled()) return;
+        parent.logInfo("Saving avatar: " + avatarHash);
         var file = parent.getAvatar(avatarHash.get()).toFile();
         try (FileOutputStream fos = new FileOutputStream(file)) {
             fos.write(avatarData);
@@ -473,7 +474,7 @@ public final class FiguraServerAvatarManager {
         public void acceptChunk(UUID uuid, int streamId, byte[] data, boolean finalChunk) {
             var key = new IncomingAvatarKey(uuid, streamId);
             if (!streams.containsKey(key)) {
-                parent.sendPacket(uuid, new CloseIncomingStreamPacket(streamId, (short) 301));
+                parent.sendPacket(uuid, new CloseIncomingStreamPacket(streamId, StatusCode.INVALID_STREAM_ID));
                 return;
             }
 
@@ -507,10 +508,11 @@ public final class FiguraServerAvatarManager {
                 // In case if avatar size is exceeded - closing the stream and removing it from handler.
                 if (size > parent.config().avatarSizeLimit() &&
                     !Events.call(new AvatarUploadSizeExceedEvent(uploader, size)).isCancelled()) {
-                    close((short) 302);
+                    close(StatusCode.MAX_AVATAR_SIZE_EXCEEDED);
                     return true;
                 }
                 dataChunks.add(chunk);
+
 
                 if (finalChunk) {
                     // Collecting all data chunks in one array
@@ -518,13 +520,14 @@ public final class FiguraServerAvatarManager {
                     byte[] avatarData = new byte[size];
                     for (byte[] dataChunk: dataChunks) {
                         System.arraycopy(dataChunk, 0, avatarData, offset, dataChunk.length);
+                        offset += dataChunk.length;
                     }
                     Hash dataHash = Utils.getHash(avatarData);
                     // In case if resulting data hash doesn't match - rejecting it.
                     // Closing this stream is not required as client should've done it by itself
                     if (!dataHash.equals(hash)) {
                         Events.call(new InvalidIncomingAvatarHashEvent(hash, dataHash));
-                        parent.sendPacket(uploader, new CloseIncomingStreamPacket(streamId, (short) 303));
+                        parent.sendPacket(uploader, new CloseIncomingStreamPacket(streamId, StatusCode.INVALID_HASH));
                         return true;
                     }
 
@@ -548,10 +551,9 @@ public final class FiguraServerAvatarManager {
                     avatarHandle.metadata = Either.newA(metadata);
 
                     // Finishing work of all streams
-                    var selfKey = new IncomingAvatarKey(uploader, streamId);
                     for (IncomingAvatarKey key: hashesToUploads.get(hash)) {
                         var stream = streams.get(key);
-                        stream.finish(selfKey.equals(key));
+                        stream.finish();
                     }
 
                     // Removing keys from hash map
@@ -563,20 +565,17 @@ public final class FiguraServerAvatarManager {
                 return false;
             }
 
-            private void close(short code) {
+            private void close(StatusCode code) {
                 parent.sendPacket(uploader, new CloseIncomingStreamPacket(streamId, code));
             }
 
-            private void finish(boolean uploadingFinisher) {
-                // Immediately closing our stream if the user is not the one who finished uploading earlier
-                close((short) 100);
+            private void finish() {
+                close(StatusCode.FINISHED);
                 finished = true;
-                CompletableFuture<? extends Packet> future = parent.userManager().getUser(uploader)
-                        .thenApplyAsync( u -> {
+                parent.userManager().getUser(uploader)
+                        .thenAcceptAsync( u -> {
                             u.replaceOrAddOwnedAvatar(avatarId, hash, ehash).join();
-                            return new S2COwnedAvatarsPacket(u.ownedAvatars());
-                        });
-                parent.sendDeferredPacket(uploader, future);
+                });
             }
 
             private boolean isFinished() {

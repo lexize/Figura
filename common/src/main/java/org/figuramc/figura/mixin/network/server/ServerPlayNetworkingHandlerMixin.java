@@ -21,11 +21,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class ServerPlayNetworkingHandlerMixin {
     @Shadow public ServerPlayer player;
 
-    @Inject(method = "<init>", at = @At("RETURN"))
-    private void onPlayerPlayInit(MinecraftServer server, Connection connection, ServerPlayer player, CallbackInfo ci) {
-        FiguraModServer.getInstance().userManager().onUserJoin(player.getUUID());
-    }
-
     @Inject(method = "handleCustomPayload", at = @At("HEAD"), cancellable = true)
     private void onCustomPayload(ServerboundCustomPayloadPacket packet, CallbackInfo ci) {
         var srv = FiguraModServer.getInstance();
@@ -33,7 +28,12 @@ public class ServerPlayNetworkingHandlerMixin {
         var id = new Identifier(resLoc.getNamespace(), resLoc.getPath());
         C2SPacketHandler<Packet> handler = srv.getPacketHandler(id);
         if (handler != null) {
-            handler.handle(this.player.getUUID(), handler.serialize(new FriendlyByteBufWrapper(packet.getData())));
+            try {
+                handler.handle(this.player.getUUID(), handler.serialize(new FriendlyByteBufWrapper(packet.getData())));
+            }
+            catch (Exception e) {
+                srv.logError("", e);
+            }
             ci.cancel();
         }
     }

@@ -15,7 +15,7 @@ import java.nio.file.Path;
 import java.util.UUID;
 
 public class FiguraModServer extends FiguraServer {
-    public static final Logger LOGGER = LoggerFactory.getLogger("Figura Server");
+    public static final Logger LOGGER = LoggerFactory.getLogger("FSB");
     private final MinecraftServer parent;
     public FiguraModServer(MinecraftServer parent) {
         this.parent = parent;
@@ -38,7 +38,29 @@ public class FiguraModServer extends FiguraServer {
         }
     }
 
+    @Override
+    public void logInfo(String text) {
+        LOGGER.info(text);
+    }
+
+    @Override
+    public void logError(String text) {
+        LOGGER.error(text);
+    }
+
+    @Override
+    public void logError(String text, Throwable err) {
+        LOGGER.error(text, err);
+    }
+
+    @Override
+    public void logDebug(String text) {
+        LOGGER.debug(text);
+    }
+
     public static FiguraModServer getInstance() {
         return (FiguraModServer) INSTANCE;
     }
+
+
 }

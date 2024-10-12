@@ -24,12 +24,13 @@ public class C2SFetchUserdataPacketHandler extends AuthorizedC2SPacketHandler<C2
     protected void handle(FiguraUser sender, C2SFetchUserdataPacket packet) {
         CompletableFuture<FiguraUser> user = parent.userManager().getUser(packet.target());
         // Future for a packet that will be sent when done
-        CompletableFuture<S2CUserdataPacket> packetFuture = user.thenApply(u -> {
+        CompletableFuture<S2CUserdataPacket> packetFuture = user.thenApplyAsync(u -> {
             UUID target = u.uuid();
             HashMap<String, EHashPair> avatars = new HashMap<>();
             // Collecting hashes for requested user
             for (Map.Entry<String, EHashPair> entry : u.equippedAvatars().entrySet()) {
                 Hash hash = entry.getValue().hash();
+                parent.logInfo("%s %s".formatted(entry.getKey(), hash));
                 Hash ehash = entry.getValue().ehash();
                 avatars.put(entry.getKey(), new EHashPair(hash, ehash));
             }

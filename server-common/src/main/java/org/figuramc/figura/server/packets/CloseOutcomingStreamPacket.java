@@ -2,6 +2,7 @@ package org.figuramc.figura.server.packets;
 
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Identifier;
+import org.figuramc.figura.server.utils.StatusCode;
 
 /**
  * Closes outcoming stream opened by this side. Same on client and server side.
@@ -9,26 +10,30 @@ import org.figuramc.figura.server.utils.Identifier;
 public class CloseOutcomingStreamPacket implements Packet {
     public static final Identifier PACKET_ID = new Identifier("figura", "stream/close_out");
     private final int streamId;
-    private final short code;
+    private final StatusCode code;
 
-    public CloseOutcomingStreamPacket(int streamId, short code) {
+    public CloseOutcomingStreamPacket(int streamId, StatusCode code) {
         this.streamId = streamId;
         this.code = code;
     }
 
     public CloseOutcomingStreamPacket(IFriendlyByteBuf buf) {
         streamId = buf.readInt();
-        code = buf.readShort();
+        code = StatusCode.getFromCode(buf.readShort());
     }
 
     public int streamId() {
         return streamId;
     }
 
+    public StatusCode code() {
+        return code;
+    }
+
     @Override
     public void write(IFriendlyByteBuf buf) {
         buf.writeInt(streamId);
-        buf.writeShort(code);
+        buf.writeShort(code.statusCode());
     }
 
     @Override

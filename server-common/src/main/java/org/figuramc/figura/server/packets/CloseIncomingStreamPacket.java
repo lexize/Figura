@@ -2,6 +2,7 @@ package org.figuramc.figura.server.packets;
 
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Identifier;
+import org.figuramc.figura.server.utils.StatusCode;
 
 /**
  * Closes incoming stream opened by other side. Same on client and server side.
@@ -18,34 +19,35 @@ public class CloseIncomingStreamPacket implements Packet {
         302: Error - Max avatar size exceeded
         303: Error - Invalid hash
      */
-    private final short code;
+    private final StatusCode code;
 
-    public CloseIncomingStreamPacket(int streamId, short code) {
+    public CloseIncomingStreamPacket(int streamId, StatusCode code) {
         this.streamId = streamId;
         this.code = code;
     }
 
     public CloseIncomingStreamPacket(IFriendlyByteBuf buf) {
         streamId = buf.readInt();
-        code = buf.readShort();
+        code = StatusCode.getFromCode(buf.readShort());
     }
 
     public int streamId() {
         return streamId;
     }
 
-    public short code() {
+    public StatusCode code() {
         return code;
     }
 
     @Override
     public void write(IFriendlyByteBuf buf) {
         buf.writeInt(streamId);
-        buf.writeShort(code);
+        buf.writeShort(code.statusCode());
     }
 
     @Override
     public Identifier getId() {
         return PACKET_ID;
     }
+
 }

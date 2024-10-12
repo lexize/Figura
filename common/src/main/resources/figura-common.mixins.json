@@ -97,7 +97,8 @@
   ],
   "server": [
     "network.server.ServerPlayNetworkingHandlerMixin",
-    "network.server.MinecraftServerMixin"
+    "network.server.MinecraftServerMixin",
+    "network.server.PlayerListMixin"
   ],
   "injectors": {
     "defaultRequire": 1

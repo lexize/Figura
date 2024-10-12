@@ -93,7 +93,9 @@ public final class FiguraUser {
     }
 
     public void save(IFriendlyByteBuf buf) {
-        buf.writeBytes(prideBadges.toByteArray());
+        byte[] badges = prideBadges.toByteArray();
+        buf.writeVarInt(badges.length);
+        buf.writeBytes(badges);
         buf.writeVarInt(equippedAvatars.size());
         for (var equippedAvatar : equippedAvatars.entrySet()) {
             buf.writeByteArray(equippedAvatar.getKey().getBytes(UTF_8));
@@ -120,7 +122,9 @@ public final class FiguraUser {
     }
 
     public static FiguraUser load(UUID player, IFriendlyByteBuf buf) {
-        BitSet prideBadges = BitSet.valueOf(buf.readByteArray(256));
+        int length = buf.readVarInt();
+        byte[] arr = buf.readBytes(length);
+        BitSet prideBadges = BitSet.valueOf(arr);
         int equippedAvatarsCount = buf.readVarInt();
         HashMap<String, EHashPair> equippedAvatars = new HashMap<>();
         for (int i = 0; i < equippedAvatarsCount; i++) {
@@ -164,7 +168,7 @@ public final class FiguraUser {
     }
 
     public CompletableFuture<Void> removeOwnedAvatar(String avatarId) {
-        if (ownedAvatars.containsKey(avatarId)) {
+        if (!ownedAvatars.containsKey(avatarId)) {
             return CompletableFuture.completedFuture(null);
         }
         else {
@@ -176,13 +180,13 @@ public final class FiguraUser {
     }
 
     public CompletableFuture<Void> removeEquippedAvatar(String avatarId) {
-        if (equippedAvatars.containsKey(avatarId)) {
+        if (!equippedAvatars.containsKey(avatarId)) {
             return CompletableFuture.completedFuture(null);
         }
         else {
             EHashPair avatar = equippedAvatars.remove(avatarId);
             return FiguraServer.getInstance().avatarManager().getAvatarMetadata(avatar.hash()).thenAcceptAsync(m -> {
-                m.owners().remove(uuid());
+                m.equipped().remove(uuid());
             });
         }
     }

@@ -118,6 +118,11 @@ public class Utils {
         }
     }
 
+    public static Hash parseHash(String hash) {
+        byte[] h = bytesFromHex(hash);
+        return new Hash(h);
+    }
+
     public static byte[] copyBytes(byte[] source) {
         return Arrays.copyOf(source, source.length);
     }

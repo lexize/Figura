@@ -16,6 +16,11 @@ public class Hash {
     }
 
     @Override
+    public String toString() {
+        return Utils.hexFromBytes(hash);
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Hash hash1)) return false;

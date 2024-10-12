@@ -24,6 +24,10 @@ public class AllowIncomingStreamPacket implements Packet {
         buf.writeInt(streamId);
     }
 
+    public int streamId() {
+        return streamId;
+    }
+
     @Override
     public Identifier getId() {
         return PACKET_ID;

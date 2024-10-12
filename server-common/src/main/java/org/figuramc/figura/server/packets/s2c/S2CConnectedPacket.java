@@ -4,8 +4,8 @@ import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Identifier;
 
-public class S2CConnected implements Packet {
-    public static final Identifier PACKET_ID = new Identifier("figura", "handshake");
+public class S2CConnectedPacket implements Packet {
+    public static final Identifier PACKET_ID = new Identifier("figura", "connected");
 
     @Override
     public void write(IFriendlyByteBuf buf) {

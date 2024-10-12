@@ -13,7 +13,7 @@ public class C2SBackendHandshakePacket implements Packet {
     private final boolean pings;
     private final boolean avatars;
 
-    public C2SBackendHandshakePacket(boolean pings, boolean avatars, int incomingChunkSize) {
+    public C2SBackendHandshakePacket(boolean pings, boolean avatars) {
         this.pings = pings;
         this.avatars = avatars;
     }

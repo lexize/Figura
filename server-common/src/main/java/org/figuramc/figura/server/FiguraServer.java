@@ -33,7 +33,7 @@ public abstract class FiguraServer {
         put(C2SFetchAvatarPacket.PACKET_ID, new C2SFetchAvatarPacketHandler(FiguraServer.this));
         put(C2SFetchUserdataPacket.PACKET_ID, new C2SFetchUserdataPacketHandler(FiguraServer.this));
         put(C2SUploadAvatarPacket.PACKET_ID, new C2SUploadAvatarPacketHandler(FiguraServer.this));
-        // TODO: FetchOwnedAvatarsPacketHandler
+        put(C2SEquipAvatarsPacket.PACKET_ID, new C2SEquipAvatarPacketHandler(FiguraServer.this));
         // TODO: C2SPingPacketHandler
         put(C2SDeleteAvatarPacket.PACKET_ID, new C2SDeleteAvatarPacketHandler(FiguraServer.this));
 
@@ -70,6 +70,7 @@ public abstract class FiguraServer {
         // TODO: reading config
         getUsersFolder().toFile().mkdirs();
         getAvatarsFolder().toFile().mkdirs();
+        logInfo("Initialization complete.");
     }
 
     public final C2SPacketHandler<Packet> getPacketHandler(Identifier id) {
@@ -77,6 +78,7 @@ public abstract class FiguraServer {
     }
 
     public final void close() {
+        logInfo("Closing FSB");
         avatarManager.close();
         userManager.close();
         INSTANCE = null;
@@ -99,6 +101,7 @@ public abstract class FiguraServer {
                     config.avatarSizeLimit(),
                     config.avatarsCountLimit()
             ));
+            logInfo("Sent handshake to %s".formatted(receiver));
         }
     }
 
@@ -114,6 +117,7 @@ public abstract class FiguraServer {
         OutcomingPacketEvent event = new OutcomingPacketEvent(receiver, packet);
         Events.call(event);
         if (!event.isCancelled()) {
+            logInfo("Sending packet %s to %s".formatted(packet.getId(), receiver));
             sendPacketInternal(receiver, packet);
         }
     }
@@ -127,4 +131,9 @@ public abstract class FiguraServer {
     public FiguraServerAvatarManager avatarManager() {
         return avatarManager;
     }
+
+    public abstract void logInfo(String text);
+    public abstract void logError(String text);
+    public abstract void logError(String text, Throwable err);
+    public abstract void logDebug(String text);
 }

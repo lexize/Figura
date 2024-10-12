@@ -17,7 +17,7 @@ public abstract class AuthorizedC2SPacketHandler<P extends Packet> implements C2
     @Override
     public final void handle(UUID sender, P packet) {
         CompletableFuture<FiguraUser> user = parent.userManager().getUserOrNull(sender);
-        if (user == null || user.isDone() || user.join().offline()) return;
+        if (user == null || !user.isDone() || user.join().offline()) return;
         handle(user.join(), packet);
     }
 
