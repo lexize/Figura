@@ -23,7 +23,7 @@ public class C2SPingPacketHandler extends AuthorizedC2SPacketHandler<C2SPingPack
         }
         counter.addPing(packet.data().length);
         parent.userManager().forEachUser(user -> {
-            if (packet.sync() | user != sender) user.sendPacket(new S2CPingPacket(sender.uuid(), packet.id(), packet.data()));
+            if (packet.sync() || user != sender) user.sendPacket(new S2CPingPacket(sender.uuid(), packet.id(), packet.data()));
         });
     }
 

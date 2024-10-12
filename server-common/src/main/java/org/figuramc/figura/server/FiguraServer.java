@@ -36,6 +36,7 @@ public abstract class FiguraServer {
         put(C2SUploadAvatarPacket.PACKET_ID, new C2SUploadAvatarPacketHandler(FiguraServer.this));
         put(C2SEquipAvatarsPacket.PACKET_ID, new C2SEquipAvatarPacketHandler(FiguraServer.this));
         put(C2SDeleteAvatarPacket.PACKET_ID, new C2SDeleteAvatarPacketHandler(FiguraServer.this));
+        put(C2SPingPacket.PACKET_ID, new C2SPingPacketHandler(FiguraServer.this));
 
         put(AvatarDataPacket.PACKET_ID, new C2SAvatarDataPacketHandler(FiguraServer.this));
     }};
@@ -87,6 +88,7 @@ public abstract class FiguraServer {
     public final void tick() {
         deferredPacketsQueue.tick();
         avatarManager.tick();
+        userManager().tick();
     }
 
     public final void sendHandshake(UUID receiver) {

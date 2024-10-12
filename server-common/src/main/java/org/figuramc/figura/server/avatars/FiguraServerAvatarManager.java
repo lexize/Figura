@@ -140,7 +140,7 @@ public final class FiguraServerAvatarManager {
         }
 
         public Hash getOwnerEHash(UUID owner) {
-            return owners.get(owner);
+            return owners.getOrDefault(owner, Hash.empty());
         }
 
         public Hash getEquippedEHash(UUID owner) {

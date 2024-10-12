@@ -350,7 +350,7 @@ public class NetworkStuff {
                 if (cat != null) PermissionManager.setDefaultFor(user.id, cat);
             }
 
-            user.loadData(avatars, badgesPair);
+            if (!FSB.connected()) user.loadData(avatars, badgesPair);
         });
     }
 

@@ -4,6 +4,7 @@ import org.figuramc.figura.server.events.Events;
 import org.figuramc.figura.server.events.users.LoadPlayerDataEvent;
 import org.figuramc.figura.server.events.users.SavePlayerDataEvent;
 import org.figuramc.figura.server.events.users.UserLoadingExceptionEvent;
+import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.server.utils.Either;
 
 import java.nio.file.Path;
@@ -17,6 +18,7 @@ public final class FiguraUserManager {
     private final FiguraServer parent;
     private final HashMap<UUID, Either<FiguraUser, FutureHandle>> users = new HashMap<>();
     private final LinkedList<UUID> expectedUsers = new LinkedList<>();
+    private int pingsTickCounter = 0;
 
     public FiguraUserManager(FiguraServer parent) {
         this.parent = parent;
@@ -115,6 +117,14 @@ public final class FiguraUserManager {
 
     public boolean isExpected(UUID user) {
         return expectedUsers.contains(user);
+    }
+
+    public void tick() {
+        if (pingsTickCounter == 20) {
+            forEachUser(user -> user.pingCounter().reset());
+            pingsTickCounter = 0;
+        }
+        pingsTickCounter++;
     }
 
     private record FutureHandle(UUID user, CompletableFuture<FiguraUser> future) {}

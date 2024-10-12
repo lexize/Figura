@@ -27,6 +27,10 @@ public class Hash {
         return Arrays.equals(hash, hash1.hash);
     }
 
+    public static Hash empty() {
+        return new Hash(new byte[32]);
+    }
+
     @Override
     public int hashCode() {
         return Arrays.hashCode(hash);
