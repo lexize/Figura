@@ -2,6 +2,7 @@ package org.figuramc.figura.backend2;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.FriendlyByteBuf;
@@ -28,6 +29,7 @@ import org.figuramc.figura.server.utils.StatusCode;
 import org.figuramc.figura.server.utils.Utils;
 import org.figuramc.figura.utils.FiguraText;
 import org.figuramc.figura.utils.FriendlyByteBufWrapper;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.util.*;
@@ -46,13 +48,25 @@ public class FSB {
         return s2CHandshake != null && state == State.Connected;
     }
 
-    public static void handleHandshake(S2CBackendHandshakePacket packet) {
-        ServerDataAccessor data = (ServerDataAccessor) Minecraft.getInstance().getCurrentServer();
+    public static S2CBackendHandshakePacket handshake() {
+        return s2CHandshake;
+    }
+
+    public static boolean handleHandshake(S2CBackendHandshakePacket packet, boolean login, @Nullable ServerData sd) {
+        ServerDataAccessor data = (ServerDataAccessor) (sd != null ? sd : Minecraft.getInstance().getCurrentServer());
+        FiguraMod.LOGGER.info("{}", data == null);
         if (data != null && data.figura$allowFigura()) {
+            FiguraMod.LOGGER.info("{}", data.figura$allowFigura());
             s2CHandshake = packet;
-            sendPacket(new C2SBackendHandshakePacket(true, true));
-            state = State.HandshakeSent;
+            NetworkStuff.disconnect(null);
+            state = State.Connected;
+            if (!login) sendPacket(new C2SBackendHandshakePacket());
+            NetworkStuff.setLimits();
+            NetworkStuff.backendStatus = 3;
+            FiguraToast.sendToast(FiguraText.of("backend.fsb_connected"));
+            return true;
         }
+        return false;
     }
 
     public static void getUser(UserData userData) {
@@ -87,6 +101,7 @@ public class FSB {
         outputStreams.clear();
         nextInputId = 0;
         nextOutputId = 0;
+        NetworkStuff.backendStatus = 1;
         // TODO: Handling disconnecting properly, closing all incoming/outcoming streams, etc.
     }
 
@@ -99,12 +114,6 @@ public class FSB {
         inputStreams.put(nextInputId, new AvatarInputStream(nextInputId, h, getEHash(h), target));
         sendPacket(new C2SFetchAvatarPacket(nextInputId, h));
         nextInputId++;
-    }
-
-    public static void handleConnection() {
-        if (state == State.HandshakeSent) {
-            state = State.Connected;
-        }
     }
 
     public static void handleUserdata(S2CUserdataPacket packet) {

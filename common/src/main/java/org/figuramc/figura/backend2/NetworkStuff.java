@@ -134,6 +134,7 @@ public class NetworkStuff {
     }
 
     private static void processRequests() {
+        if (FSB.connected()) return;
         if (!API_REQUESTS.isEmpty()) {
             Request<HttpAPI> request;
             while ((request = API_REQUESTS.poll()) != null) {
@@ -152,6 +153,7 @@ public class NetworkStuff {
     }
 
     protected static void async(Runnable toRun) {
+        if (FSB.connected()) return;
         if (tasks == null || tasks.isDone()) {
             tasks = CompletableFuture.runAsync(toRun);
         } else {
@@ -172,12 +174,14 @@ public class NetworkStuff {
 
 
     public static void auth() {
+        if (FSB.connected()) return;
         authCheck = RECONNECT;
         AuthHandler.auth(false);
         fetchMOTD();
     }
 
     public static void reAuth() {
+        if (FSB.connected()) return;
         authCheck = RECONNECT;
         AuthHandler.auth(true);
         fetchMOTD();
@@ -199,14 +203,14 @@ public class NetworkStuff {
 
 
     public static void connect(String token) {
+        if (FSB.connected())
+            return;
         if (isConnected())
             disconnect(null);
 
         backendStatus = 2;
-        if (!FSB.connected()) {
-            connectAPI(token);
-            connectWS(token);
-        }
+        connectAPI(token);
+        connectWS(token);
     }
 
     private static void fetchMOTD() {
@@ -217,6 +221,7 @@ public class NetworkStuff {
     }
 
     public static void disconnect(String reason) {
+        if (tasks != null) tasks.cancel(true);
         backendStatus = 1;
         disconnectedReason = reason;
         disconnectAPI();
@@ -228,10 +233,12 @@ public class NetworkStuff {
 
 
     private static void queueString(UUID owner, Function<HttpAPI, HttpRequest> request, BiConsumer<Integer, String> consumer) {
+        if (FSB.connected()) return;
         API_REQUESTS.add(new Request<>(owner, api -> HttpAPI.runString(request.apply(api), consumer)));
     }
 
     private static void queueStream(UUID owner, Function<HttpAPI, HttpRequest> request, BiConsumer<Integer, InputStream> consumer) {
+        if (FSB.connected()) return;
         API_REQUESTS.add(new Request<>(owner, api -> HttpAPI.runStream(request.apply(api), consumer)));
     }
 
@@ -244,6 +251,7 @@ public class NetworkStuff {
     }
 
     private static void connectAPI(String token) {
+        if (FSB.connected()) return;
         api = new HttpAPI(token);
         checkVersion();
         setLimits();
@@ -255,6 +263,7 @@ public class NetworkStuff {
     }
 
     private static void checkAPI() {
+        if (FSB.connected()) return;
         async(() -> {
             if (api == null) {
                 reAuth();
@@ -282,6 +291,12 @@ public class NetworkStuff {
     }
 
     public static void setLimits() {
+        if (FSB.connected()) {
+            uploadRate.set(0.95);
+            downloadRate.set(0.95);
+            maxAvatarSize = FSB.handshake().maxAvatarSize();
+        }
+
         queueString(Util.NIL_UUID, HttpAPI::getLimits, (code, data) -> {
             responseDebug("setLimits", code, data);
             JsonObject json = JsonParser.parseString(data).getAsJsonObject();
@@ -471,6 +486,7 @@ public class NetworkStuff {
 
 
     private static void connectWS(String token) {
+        if (FSB.connected()) return;
         if (ws != null) ws.disconnect();
         try {
             ws = KeyStoreHelper.websocketWithBackendCertificates(token);
@@ -508,6 +524,7 @@ public class NetworkStuff {
     }
 
     private static void subscribe(UUID id) {
+        if (FSB.connected()) return;
         if (checkUUID(id) || !checkWS())
             return;
 
@@ -523,6 +540,7 @@ public class NetworkStuff {
     }
 
     private static void unsubscribe(UUID id) {
+        if (FSB.connected()) return;
         if (checkUUID(id) || !checkWS())
             return;
 
@@ -574,7 +592,7 @@ public class NetworkStuff {
     }
 
     public static boolean canUpload() {
-        return isConnected() && uploadRate.check() || (FSB.connected());
+        return FSB.connected() || isConnected() && uploadRate.check();
     }
 
     public static int getSizeLimit() {

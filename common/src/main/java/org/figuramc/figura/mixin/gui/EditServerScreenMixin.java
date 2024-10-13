@@ -8,6 +8,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.chat.Component;
 import org.figuramc.figura.ducks.ServerDataAccessor;
+import org.figuramc.figura.utils.FiguraText;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -34,7 +35,7 @@ public abstract class EditServerScreenMixin extends Screen {
         int width = 20;
         int height = 20;
         ServerDataAccessor data = (ServerDataAccessor) serverData;
-        fsbState = new Checkbox(x, y, width, height, Component.literal("FSB"), data.figura$allowFigura());
+        fsbState = new Checkbox(x, y, width, height, FiguraText.of("fsb"), data.figura$allowFigura());
         addRenderableWidget(fsbState);
     }
 

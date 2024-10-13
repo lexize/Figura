@@ -17,17 +17,13 @@ public class C2SHandshakeHandler implements C2SPacketHandler<C2SBackendHandshake
 
     @Override
     public C2SBackendHandshakePacket serialize(IFriendlyByteBuf byteBuf) {
-        return new C2SBackendHandshakePacket(byteBuf);
+        return new C2SBackendHandshakePacket();
     }
 
     @Override
     public void handle(UUID sender, C2SBackendHandshakePacket packet) {
         FiguraUserManager manager = parent.userManager();
         if (!manager.isExpected(sender)) return;
-        parent.sendDeferredPacket(sender, manager
-                .setupOnlinePlayer(sender, packet.pings(), packet.avatars())
-                .thenApplyAsync(
-                v -> new S2CConnectedPacket()
-        ));
+        manager.setupOnlinePlayer(sender);
     }
 }

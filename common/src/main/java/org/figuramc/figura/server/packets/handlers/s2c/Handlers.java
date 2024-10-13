@@ -11,7 +11,6 @@ import java.util.HashMap;
 public class Handlers {
     private static final HashMap<Identifier, S2CPacketHandler<?>> PACKET_HANDLERS = new HashMap<>() {{
         put(S2CBackendHandshakePacket.PACKET_ID, new S2CHandshakeHandler());
-        put(S2CConnectedPacket.PACKET_ID, new S2CConnectedHandler());
         put(S2CUserdataPacket.PACKET_ID, new S2CUserdataHandler());
         put(AvatarDataPacket.PACKET_ID, new S2CAvatarDataPacketHandler());
         put(CloseOutcomingStreamPacket.PACKET_ID, new CloseIncomingStreamPacketHandler());

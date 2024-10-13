@@ -17,8 +17,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public final class FiguraUser {
     private final UUID player;
     private boolean online;
-    private boolean pings;
-    private boolean avatars;
     private final PingCounter pingCounter = new PingCounter();
     private final BitSet prideBadges;
     private final HashMap<String, EHashPair> equippedAvatars;
@@ -28,8 +26,6 @@ public final class FiguraUser {
     public FiguraUser(UUID player, boolean online, boolean allowPings, boolean allowAvatars, BitSet prideBadges, HashMap<String, EHashPair> equippedAvatars, HashMap<String, EHashPair> ownedAvatars) {
         this.player = player;
         this.online = online;
-        this.pings = allowPings;
-        this.avatars = allowAvatars;
         this.prideBadges = prideBadges;
         this.equippedAvatars = equippedAvatars;
         this.ownedAvatars = ownedAvatars;
@@ -45,14 +41,6 @@ public final class FiguraUser {
 
     public boolean offline() {
         return !online;
-    }
-
-    public boolean avatarsAllowed() {
-        return avatars;
-    }
-
-    public boolean pingsAllowed() {
-        return pings;
     }
 
     public PingCounter pingCounter() {
@@ -154,9 +142,8 @@ public final class FiguraUser {
         return null;
     }
 
-    public void update(boolean allowPings, boolean allowAvatars) {
-        this.pings = allowPings;
-        this.avatars = allowAvatars;
+    public void update() {
+
     }
 
     public void setOnline() {

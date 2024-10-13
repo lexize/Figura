@@ -1,5 +1,7 @@
 package org.figuramc.figura.server;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.figuramc.figura.server.avatars.FiguraServerAvatarManager;
 import org.figuramc.figura.server.events.Events;
 import org.figuramc.figura.server.events.HandshakeEvent;
@@ -13,16 +15,22 @@ import org.figuramc.figura.server.utils.Identifier;
 import org.figuramc.figura.server.utils.Pair;
 import org.figuramc.figura.server.utils.Utils;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public abstract class FiguraServer {
+    private final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     protected static FiguraServer INSTANCE;
     private final FiguraUserManager userManager = new FiguraUserManager(this);
     private final FiguraServerAvatarManager avatarManager = new FiguraServerAvatarManager(this);
-    private final FiguraServerConfig config = new FiguraServerConfig();
+    private FiguraServerConfig config = new FiguraServerConfig();
     private final DeferredPacketsQueue deferredPacketsQueue = new DeferredPacketsQueue(this);
     protected FiguraServer() {
         if (INSTANCE != null) throw new IllegalStateException("Can't create more than one instance of FiguraServer");
@@ -55,6 +63,10 @@ public abstract class FiguraServer {
         return getFiguraFolder().resolve("avatars");
     }
 
+    private Path getConfigFile() {
+        return getFiguraFolder().resolve("config.json");
+    }
+
     public Path getAvatar(byte[] hash) {
         return getAvatarsFolder().resolve("%s.nbt".formatted(Utils.hexFromBytes(hash)));
     }
@@ -69,9 +81,28 @@ public abstract class FiguraServer {
 
     public final void init() {
         // TODO: reading config
+        getFiguraFolder().toFile().mkdirs();
+        loadConfig();
         getUsersFolder().toFile().mkdirs();
         getAvatarsFolder().toFile().mkdirs();
         logInfo("Initialization complete.");
+    }
+
+    private void loadConfig() {
+        File cfg = getConfigFile().toFile();
+        if (cfg.exists()) {
+            try (FileInputStream fis = new FileInputStream(cfg)) {
+                String configString = new String(fis.readAllBytes(), StandardCharsets.UTF_8);
+                config = GSON.fromJson(configString, FiguraServerConfig.class);
+            }
+            catch (Exception ignored) {}
+        }
+        config = new FiguraServerConfig();
+        try (FileOutputStream fos = new FileOutputStream(cfg)) {
+            String res = GSON.toJson(config);
+            fos.write(res.getBytes(StandardCharsets.UTF_8));
+        }
+        catch (IOException ignored) {}
     }
 
     public final C2SPacketHandler<Packet> getPacketHandler(Identifier id) {
@@ -91,18 +122,19 @@ public abstract class FiguraServer {
         userManager().tick();
     }
 
-    public final void sendHandshake(UUID receiver) {
+    public final S2CBackendHandshakePacket getHandshake(UUID receiver) {
         var event = Events.call(new HandshakeEvent(receiver));
         if (!event.isCancelled()) {
             userManager.expect(receiver);
-            sendPacket(receiver, new S2CBackendHandshakePacket(
+            logInfo("Sent handshake to %s".formatted(receiver));
+            return new S2CBackendHandshakePacket(
                     config.pingsRateLimit(),
                     config.pingsSizeLimit(),
                     config.avatarSizeLimit(),
                     config.avatarsCountLimit()
-            ));
-            logInfo("Sent handshake to %s".formatted(receiver));
+            );
         }
+        return null;
     }
 
     public FiguraServerConfig config() {

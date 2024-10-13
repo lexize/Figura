@@ -12,6 +12,6 @@ public class S2CHandshakeHandler implements S2CPacketHandler<S2CBackendHandshake
 
     @Override
     public void handle(S2CBackendHandshakePacket packet) {
-        FSB.handleHandshake(packet);
+        FSB.handleHandshake(packet, false, null);
     }
 }

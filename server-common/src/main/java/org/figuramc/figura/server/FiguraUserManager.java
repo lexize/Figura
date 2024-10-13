@@ -31,7 +31,7 @@ public final class FiguraUserManager {
     }
 
     public void onUserJoin(UUID player) {
-        parent.sendHandshake(player);
+
     }
 
     public CompletableFuture<FiguraUser> getUser(UUID player) {
@@ -57,12 +57,12 @@ public final class FiguraUserManager {
         return future;
     }
 
-    public CompletableFuture<Void> setupOnlinePlayer(UUID uuid, boolean allowPings, boolean allowAvatars) {
+    public CompletableFuture<Void> setupOnlinePlayer(UUID uuid) {
         CompletableFuture<FiguraUser> user = getUser(uuid);
         expectedUsers.remove(uuid); // This is called either way just to remove it in case if it was first time initialization
         return user.thenAcceptAsync(u -> {
             u.setOnline();
-            u.update(allowPings, allowAvatars);
+            u.update();
         });
     }
 
