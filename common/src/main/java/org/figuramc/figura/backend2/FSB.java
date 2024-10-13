@@ -54,9 +54,7 @@ public class FSB {
 
     public static boolean handleHandshake(S2CBackendHandshakePacket packet, boolean login, @Nullable ServerData sd) {
         ServerDataAccessor data = (ServerDataAccessor) (sd != null ? sd : Minecraft.getInstance().getCurrentServer());
-        FiguraMod.LOGGER.info("{}", data == null);
         if (data != null && data.figura$allowFigura()) {
-            FiguraMod.LOGGER.info("{}", data.figura$allowFigura());
             s2CHandshake = packet;
             NetworkStuff.disconnect(null);
             state = State.Connected;

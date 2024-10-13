@@ -31,7 +31,8 @@ public final class FiguraUserManager {
     }
 
     public void onUserJoin(UUID player) {
-
+        if (isExpected(player))
+            setupOnlinePlayer(player);
     }
 
     public CompletableFuture<FiguraUser> getUser(UUID player) {

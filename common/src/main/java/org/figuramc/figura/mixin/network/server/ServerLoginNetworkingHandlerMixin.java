@@ -35,22 +35,24 @@ public class ServerLoginNetworkingHandlerMixin {
     public GameProfile gameProfile;
     @Unique
     private int figura$handshakeState = 0;
-    private int packetId = -1;
+    private static final int packetId = 0xF1548731;
 
     @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerLoginPacketListenerImpl;handleAcceptedLogin()V"), cancellable = true)
     private void tick(CallbackInfo ci) {
         if (figura$handshakeState != 2) {
-            UUID id = gameProfile.getId();
-            S2CBackendHandshakePacket packet = FiguraServer.getInstance().getHandshake(id);
-            var res = new ResourceLocation(packet.getId().namespace(), packet.getId().path());
-            if (packet != null) {
-                FriendlyByteBuf byteBuf = new FriendlyByteBuf(Unpooled.buffer());
-                packet.write(new FriendlyByteBufWrapper(byteBuf));
-                packetId = new Random().nextInt();
-                connection.send(new ClientboundCustomQueryPacket(packetId, res, byteBuf));
-                figura$handshakeState = 1;
-                ci.cancel();
+            if (figura$handshakeState != 1) {
+                UUID id = gameProfile.getId();
+                S2CBackendHandshakePacket packet = FiguraServer.getInstance().getHandshake(id);
+                var res = new ResourceLocation(packet.getId().namespace(), packet.getId().path());
+                if (packet != null) {
+                    FriendlyByteBuf byteBuf = new FriendlyByteBuf(Unpooled.buffer());
+                    packet.write(new FriendlyByteBufWrapper(byteBuf));
+                    connection.send(new ClientboundCustomQueryPacket(packetId, res, byteBuf));
+                    figura$handshakeState = 1;
+                    FiguraServer.getInstance().userManager().expect(id);
+                }
             }
+            ci.cancel();
         }
     }
 
