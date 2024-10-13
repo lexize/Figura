@@ -60,7 +60,7 @@ public class FSB {
             state = State.Connected;
             if (!login) sendPacket(new C2SBackendHandshakePacket());
             NetworkStuff.setLimits();
-            NetworkStuff.backendStatus = 3;
+            NetworkStuff.backendStatus = 4;
             FiguraToast.sendToast(FiguraText.of("backend.fsb_connected"));
             return true;
         }
@@ -104,7 +104,10 @@ public class FSB {
     }
 
     public static void tick() {
-        outputStreams.forEach((i, s) -> s.tick());
+        if (FSB.connected()) {
+            if (NetworkStuff.backendStatus != 4) NetworkStuff.backendStatus = 4;
+            outputStreams.forEach((i, s) -> s.tick());
+        }
     }
 
     public static void getAvatar(UserData target, String hash) {

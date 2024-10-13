@@ -114,7 +114,7 @@ public class StatusWidget implements FiguraWidget, FiguraTickable, GuiEventListe
             case 0 -> size;
             case 1 -> texture;
             case 2 -> script;
-            case 3 -> backend + 1;
+            case 3 -> backend;
             default -> 0;
         }))).setStyle(Style.EMPTY.withFont(UIHelper.UI_FONT));
     }
@@ -125,7 +125,7 @@ public class StatusWidget implements FiguraWidget, FiguraTickable, GuiEventListe
             case 0 -> size;
             case 1 -> texture;
             case 2 -> script;
-            case 3 -> backend + 1;
+            case 3 -> backend;
             default -> 0;
         };
         String part = "gui.status." + STATUS_NAMES.get(i);
