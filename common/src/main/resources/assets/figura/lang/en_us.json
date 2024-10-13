@@ -2,6 +2,7 @@
     "figura": "Figura",
     "figura.tab": "  ",
     "figura.ellipsis": "…",
+    "figura.fsb": "Enable FSB",
     "figura.backend.connected": "Cloud connected!",
     "figura.backend.fsb_connected": "FSB connected!",
     "figura.backend.disconnected": "Cloud disconnected!",
