@@ -56,7 +56,7 @@ public class FSB {
         ServerDataAccessor data = (ServerDataAccessor) (sd != null ? sd : Minecraft.getInstance().getCurrentServer());
         if (data != null && data.figura$allowFigura()) {
             s2CHandshake = packet;
-            NetworkStuff.disconnect(null);
+            NetworkStuff.disconnect("Connected to FSB");
             state = State.Connected;
             if (!login) sendPacket(new C2SBackendHandshakePacket());
             NetworkStuff.setLimits();
