@@ -39,6 +39,7 @@ public class ServerLoginNetworkingHandlerMixin {
 
     @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerLoginPacketListenerImpl;handleAcceptedLogin()V"), cancellable = true)
     private void tick(CallbackInfo ci) {
+        if (!canListen()) return;
         if (figura$handshakeState != 2) {
             if (figura$handshakeState != 1) {
                 UUID id = gameProfile.getId();
@@ -58,6 +59,7 @@ public class ServerLoginNetworkingHandlerMixin {
 
     @Inject(method = "handleCustomQueryPacket", at = @At("HEAD"), cancellable = true)
     private void handleResponse(ServerboundCustomQueryPacket packet, CallbackInfo ci) {
+        if (!canListen()) return;
         if (figura$handshakeState == 1 && packet.getTransactionId() == packetId) {
             var data = packet.getData();
             if (data != null) {
@@ -68,5 +70,10 @@ public class ServerLoginNetworkingHandlerMixin {
             figura$handshakeState = 2;
             ci.cancel();
         }
+    }
+
+    @Unique
+    private static boolean canListen() {
+        return FiguraServer.initialized();
     }
 }

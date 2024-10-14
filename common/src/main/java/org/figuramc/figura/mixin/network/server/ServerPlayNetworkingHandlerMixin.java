@@ -6,6 +6,7 @@ import net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.figuramc.figura.server.FiguraModServer;
+import org.figuramc.figura.server.FiguraServer;
 import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.server.packets.handlers.c2s.C2SPacketHandler;
 import org.figuramc.figura.server.utils.Identifier;
@@ -23,6 +24,7 @@ public class ServerPlayNetworkingHandlerMixin {
 
     @Inject(method = "handleCustomPayload", at = @At("HEAD"), cancellable = true)
     private void onCustomPayload(ServerboundCustomPayloadPacket packet, CallbackInfo ci) {
+        if (!FiguraServer.initialized()) return;
         var srv = FiguraModServer.getInstance();
         var resLoc = packet.getIdentifier();
         var id = new Identifier(resLoc.getNamespace(), resLoc.getPath());
@@ -40,6 +42,7 @@ public class ServerPlayNetworkingHandlerMixin {
 
     @Inject(method = "onDisconnect", at = @At("HEAD"))
     private void onPlayerDisconnect(Component reason, CallbackInfo ci) {
+        if (!FiguraServer.initialized()) return;
         FiguraModServer.getInstance().userManager().onUserLeave(player.getUUID());
     }
 }

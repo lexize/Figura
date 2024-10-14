@@ -32,6 +32,7 @@ public abstract class FiguraServer {
     private final FiguraServerAvatarManager avatarManager = new FiguraServerAvatarManager(this);
     private FiguraServerConfig config = new FiguraServerConfig();
     private final DeferredPacketsQueue deferredPacketsQueue = new DeferredPacketsQueue(this);
+    private boolean initialized;
     protected FiguraServer() {
         if (INSTANCE != null) throw new IllegalStateException("Can't create more than one instance of FiguraServer");
         INSTANCE = this;
@@ -85,7 +86,12 @@ public abstract class FiguraServer {
         loadConfig();
         getUsersFolder().toFile().mkdirs();
         getAvatarsFolder().toFile().mkdirs();
+        initialized = true;
         logInfo("Initialization complete.");
+    }
+
+    public static boolean initialized() {
+        return INSTANCE != null;
     }
 
     private void loadConfig() {
