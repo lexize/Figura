@@ -47,8 +47,13 @@ public class FiguraSpigot extends JavaPlugin implements Listener {
             call(player, "addChannel", CHANNEL_ARGS, ident.toString());
             srv.logDebug("Registered %s for %s".formatted(ident, player.getName()));
         }
-        srv.sendHandshake(uuid);
-        srv.userManager().onUserJoin(uuid);
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                srv.sendHandshake(uuid);
+                srv.userManager().onUserJoin(uuid);
+            }
+        }.runTaskLater(this, 30);
     }
 
     @EventHandler
