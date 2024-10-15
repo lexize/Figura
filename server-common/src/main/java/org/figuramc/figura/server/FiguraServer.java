@@ -12,7 +12,6 @@ import org.figuramc.figura.server.packets.c2s.*;
 import org.figuramc.figura.server.packets.handlers.c2s.*;
 import org.figuramc.figura.server.packets.s2c.S2CBackendHandshakePacket;
 import org.figuramc.figura.server.utils.Identifier;
-import org.figuramc.figura.server.utils.Pair;
 import org.figuramc.figura.server.utils.Utils;
 
 import java.io.File;
@@ -21,6 +20,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -49,6 +49,10 @@ public abstract class FiguraServer {
 
         put(AvatarDataPacket.PACKET_ID, new C2SAvatarDataPacketHandler(FiguraServer.this));
     }};
+
+    public final Collection<Identifier> getIncomingPacketIds() {
+        return PACKET_HANDLERS.keySet();
+    }
 
     public static FiguraServer getInstance() {
         return INSTANCE;
@@ -128,19 +132,19 @@ public abstract class FiguraServer {
         userManager().tick();
     }
 
-    public final S2CBackendHandshakePacket getHandshake(UUID receiver) {
-        var event = Events.call(new HandshakeEvent(receiver));
-        if (!event.isCancelled()) {
-            userManager.expect(receiver);
-            logInfo("Sent handshake to %s".formatted(receiver));
-            return new S2CBackendHandshakePacket(
-                    config.pingsRateLimit(),
-                    config.pingsSizeLimit(),
-                    config.avatarSizeLimit(),
-                    config.avatarsCountLimit()
-            );
-        }
-        return null;
+    public final S2CBackendHandshakePacket getHandshake() {
+        return new S2CBackendHandshakePacket(
+                config.pingsRateLimit(),
+                config.pingsSizeLimit(),
+                config.avatarSizeLimit(),
+                config.avatarsCountLimit()
+        );
+    }
+
+    public final void sendHandshake(UUID receiver) {
+        if (Events.call(new HandshakeEvent(receiver)).isCancelled()) return;
+        userManager.expect(receiver);
+        sendPacket(receiver, getHandshake());
     }
 
     public FiguraServerConfig config() {

@@ -9,12 +9,12 @@ import net.minecraft.network.protocol.login.ServerboundCustomQueryPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.network.ServerLoginPacketListenerImpl;
 import org.figuramc.figura.server.FiguraServer;
+import org.figuramc.figura.server.events.Events;
+import org.figuramc.figura.server.events.HandshakeEvent;
 import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.server.packets.c2s.C2SBackendHandshakePacket;
-import org.figuramc.figura.server.packets.handlers.c2s.C2SHandshakeHandler;
 import org.figuramc.figura.server.packets.handlers.c2s.C2SPacketHandler;
 import org.figuramc.figura.server.packets.s2c.S2CBackendHandshakePacket;
-import org.figuramc.figura.server.utils.Identifier;
 import org.figuramc.figura.utils.FriendlyByteBufWrapper;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
@@ -41,16 +41,21 @@ public class ServerLoginNetworkingHandlerMixin {
     private void tick(CallbackInfo ci) {
         if (!canListen()) return;
         if (figura$handshakeState != 2) {
+            UUID id = gameProfile.getId();
+            if (Events.call(new HandshakeEvent(id)).isCancelled()) {
+                figura$handshakeState = 2;
+                return;
+            }
             if (figura$handshakeState != 1) {
-                UUID id = gameProfile.getId();
-                S2CBackendHandshakePacket packet = FiguraServer.getInstance().getHandshake(id);
+                var srv = FiguraServer.getInstance();
+                S2CBackendHandshakePacket packet = srv.getHandshake();
                 var res = new ResourceLocation(packet.getId().namespace(), packet.getId().path());
                 if (packet != null) {
                     FriendlyByteBuf byteBuf = new FriendlyByteBuf(Unpooled.buffer());
                     packet.write(new FriendlyByteBufWrapper(byteBuf));
+                    srv.userManager().expect(id);
                     connection.send(new ClientboundCustomQueryPacket(packetId, res, byteBuf));
                     figura$handshakeState = 1;
-                    FiguraServer.getInstance().userManager().expect(id);
                 }
             }
             ci.cancel();
