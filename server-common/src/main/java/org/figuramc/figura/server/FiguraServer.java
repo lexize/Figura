@@ -6,11 +6,10 @@ import org.figuramc.figura.server.avatars.FiguraServerAvatarManager;
 import org.figuramc.figura.server.events.Events;
 import org.figuramc.figura.server.events.HandshakeEvent;
 import org.figuramc.figura.server.events.packets.OutcomingPacketEvent;
-import org.figuramc.figura.server.packets.AvatarDataPacket;
-import org.figuramc.figura.server.packets.Packet;
+import org.figuramc.figura.server.packets.*;
 import org.figuramc.figura.server.packets.c2s.*;
 import org.figuramc.figura.server.packets.handlers.c2s.*;
-import org.figuramc.figura.server.packets.s2c.S2CBackendHandshakePacket;
+import org.figuramc.figura.server.packets.s2c.*;
 import org.figuramc.figura.server.utils.Identifier;
 import org.figuramc.figura.server.utils.Utils;
 
@@ -22,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -49,6 +49,19 @@ public abstract class FiguraServer {
 
         put(AvatarDataPacket.PACKET_ID, new C2SAvatarDataPacketHandler(FiguraServer.this));
     }};
+
+    public static final List<Identifier> OUTCOMING_PACKETS = List.of(
+            S2CBackendHandshakePacket.PACKET_ID,
+            S2CInitializeAvatarStreamPacket.PACKET_ID,
+            S2COwnedAvatarsPacket.PACKET_ID,
+            S2CPingErrorPacket.PACKET_ID,
+            S2CPingPacket.PACKET_ID,
+            S2CUserdataPacket.PACKET_ID,
+            AllowIncomingStreamPacket.PACKET_ID,
+            AvatarDataPacket.PACKET_ID,
+            CloseIncomingStreamPacket.PACKET_ID,
+            CloseOutcomingStreamPacket.PACKET_ID
+    );
 
     public final Collection<Identifier> getIncomingPacketIds() {
         return PACKET_HANDLERS.keySet();
