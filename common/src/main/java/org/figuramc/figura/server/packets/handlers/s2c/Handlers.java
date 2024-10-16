@@ -18,6 +18,7 @@ public class Handlers {
         put(AllowIncomingStreamPacket.PACKET_ID, new AllowOutcomingStreamPacketHandler());
         put(S2CPingPacket.PACKET_ID, new S2CPingPacketHandler());
         put(S2CPingErrorPacket.PACKET_ID, new S2CPingErrorPacketHandler());
+        put(CustomFSBPacket.PACKET_ID, new S2CCustomFSBPacketHandler());
     }};
 
     public static S2CPacketHandler<Packet> getHandler(ResourceLocation resLoc) {

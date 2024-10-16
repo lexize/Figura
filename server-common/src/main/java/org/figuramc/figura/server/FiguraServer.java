@@ -32,6 +32,7 @@ public abstract class FiguraServer {
     private final FiguraServerAvatarManager avatarManager = new FiguraServerAvatarManager(this);
     private FiguraServerConfig config = new FiguraServerConfig();
     private final DeferredPacketsQueue deferredPacketsQueue = new DeferredPacketsQueue(this);
+    private final FiguraCustomPackets customPackets = new FiguraCustomPackets();
     private boolean initialized;
     protected FiguraServer() {
         if (INSTANCE != null) throw new IllegalStateException("Can't create more than one instance of FiguraServer");
@@ -46,6 +47,7 @@ public abstract class FiguraServer {
         put(C2SEquipAvatarsPacket.PACKET_ID, new C2SEquipAvatarPacketHandler(FiguraServer.this));
         put(C2SDeleteAvatarPacket.PACKET_ID, new C2SDeleteAvatarPacketHandler(FiguraServer.this));
         put(C2SPingPacket.PACKET_ID, new C2SPingPacketHandler(FiguraServer.this));
+        put(CustomFSBPacket.PACKET_ID, new C2SCustomFSBPacketHandler(FiguraServer.this));
 
         put(AvatarDataPacket.PACKET_ID, new C2SAvatarDataPacketHandler(FiguraServer.this));
     }};
@@ -60,7 +62,8 @@ public abstract class FiguraServer {
             AllowIncomingStreamPacket.PACKET_ID,
             AvatarDataPacket.PACKET_ID,
             CloseIncomingStreamPacket.PACKET_ID,
-            CloseOutcomingStreamPacket.PACKET_ID
+            CloseOutcomingStreamPacket.PACKET_ID,
+            CustomFSBPacket.PACKET_ID
     );
 
     public final Collection<Identifier> getIncomingPacketIds() {
@@ -83,6 +86,10 @@ public abstract class FiguraServer {
 
     private Path getConfigFile() {
         return getFiguraFolder().resolve("config.json");
+    }
+
+    public FiguraCustomPackets customPackets() {
+        return customPackets;
     }
 
     public Path getAvatar(byte[] hash) {

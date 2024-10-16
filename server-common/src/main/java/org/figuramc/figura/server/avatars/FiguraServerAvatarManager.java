@@ -54,7 +54,8 @@ public final class FiguraServerAvatarManager {
     }
 
     public void tick() {
-        avatars.values().forEach(AvatarHandle::tick);
+        List<AvatarHandle> a = List.copyOf(avatars.values());
+        a.forEach(AvatarHandle::tick);
         avatars.entrySet().removeIf((e) -> e.getValue().remove);
     }
 

@@ -13,6 +13,7 @@ public class C2SPingPacket implements Packet {
     private final byte[] data;
 
     public C2SPingPacket(int id, boolean sync, byte[] data) {
+        if (data.length > MAX_PING_SIZE) throw new IllegalArgumentException("Size of ping sent over FSB can't be more than %s".formatted(MAX_PING_SIZE));
         this.id = id;
         this.sync = sync;
         this.data = data;

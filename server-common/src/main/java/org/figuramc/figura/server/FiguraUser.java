@@ -1,6 +1,7 @@
 package org.figuramc.figura.server;
 
 import org.figuramc.figura.server.avatars.EHashPair;
+import org.figuramc.figura.server.packets.CustomFSBPacket;
 import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
@@ -194,6 +195,10 @@ public final class FiguraUser {
 
     public int getAvatarsCountWithId(String avatarId) {
         return ownedAvatars().size() + (ownedAvatars().containsKey(avatarId) ? 0 : 1);
+    }
+
+    public void sendFSBPacket(String id, byte[] data) {
+        sendPacket(new CustomFSBPacket(id.hashCode(), data));
     }
 
     public static class PingCounter {
