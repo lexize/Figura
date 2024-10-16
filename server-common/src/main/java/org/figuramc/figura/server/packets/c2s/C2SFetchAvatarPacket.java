@@ -9,7 +9,7 @@ import org.figuramc.figura.server.utils.Identifier;
  * Packet sent to server in order to request an avatar.
  */
 public class C2SFetchAvatarPacket implements Packet {
-    public static final Identifier PACKET_ID = new Identifier("figura", "avatars/fetch");
+    public static final Identifier PACKET_ID = new Identifier("figura", "c2s/avatars/fetch");
 
     private final int streamId;
     private final Hash hash;

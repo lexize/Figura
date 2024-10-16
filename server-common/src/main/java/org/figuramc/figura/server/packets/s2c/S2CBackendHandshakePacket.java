@@ -5,7 +5,7 @@ import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Identifier;
 
 public class S2CBackendHandshakePacket implements Packet {
-    public static final Identifier PACKET_ID = new Identifier("figura", "handshake");
+    public static final Identifier PACKET_ID = new Identifier("figura", "s2c/handshake");
 
     private final int pingsRateLimit;
     private final int pingsSizeLimit;
