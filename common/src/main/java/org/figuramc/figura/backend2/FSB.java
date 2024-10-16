@@ -4,6 +4,7 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
@@ -254,7 +255,7 @@ public class FSB {
 
                 try {
                     ByteArrayInputStream bais = new ByteArrayInputStream(avatarData);
-                    CompoundTag tag = NbtIo.readCompressed(bais);
+                    CompoundTag tag = NbtIo.readCompressed(bais, NbtAccounter.unlimitedHeap());
                     CacheAvatarLoader.save(hash.toString(), tag);
                     target.loadAvatar(tag);
                 }

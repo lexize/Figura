@@ -35,7 +35,8 @@ public abstract class EditServerScreenMixin extends Screen {
         int width = 20;
         int height = 20;
         ServerDataAccessor data = (ServerDataAccessor) serverData;
-        fsbState = new Checkbox(x, y, width, height, FiguraText.of("fsb"), data.figura$allowFigura());
+        fsbState = Checkbox.builder(FiguraText.of("fsb"), minecraft.font).pos(x, y)
+                .selected(data.figura$allowFigura()).build();
         addRenderableWidget(fsbState);
     }
 
