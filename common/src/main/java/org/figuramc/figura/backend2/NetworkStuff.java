@@ -23,6 +23,7 @@ import org.figuramc.figura.font.Emojis;
 import org.figuramc.figura.gui.FiguraToast;
 import org.figuramc.figura.permissions.PermissionManager;
 import org.figuramc.figura.permissions.Permissions;
+import org.figuramc.figura.server.packets.c2s.C2SPingPacket;
 import org.figuramc.figura.utils.FiguraText;
 import org.figuramc.figura.utils.RefilledNumber;
 import org.figuramc.figura.utils.TextUtils;
@@ -35,8 +36,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.ByteBuffer;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -47,6 +46,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import static org.figuramc.figura.server.utils.Utils.getHash;
 
 public class NetworkStuff {
 
@@ -133,6 +134,7 @@ public class NetworkStuff {
     }
 
     private static void processRequests() {
+        if (FSB.connected()) return;
         if (!API_REQUESTS.isEmpty()) {
             Request<HttpAPI> request;
             while ((request = API_REQUESTS.poll()) != null) {
@@ -151,6 +153,7 @@ public class NetworkStuff {
     }
 
     protected static void async(Runnable toRun) {
+        if (FSB.connected()) return;
         if (tasks == null || tasks.isDone()) {
             tasks = CompletableFuture.runAsync(toRun);
         } else {
@@ -171,12 +174,14 @@ public class NetworkStuff {
 
 
     public static void auth() {
+        if (FSB.connected()) return;
         authCheck = RECONNECT;
         AuthHandler.auth(false);
         fetchMOTD();
     }
 
     public static void reAuth() {
+        if (FSB.connected()) return;
         authCheck = RECONNECT;
         AuthHandler.auth(true);
         fetchMOTD();
@@ -198,6 +203,8 @@ public class NetworkStuff {
 
 
     public static void connect(String token) {
+        if (FSB.connected())
+            return;
         if (isConnected())
             disconnect(null);
 
@@ -214,6 +221,7 @@ public class NetworkStuff {
     }
 
     public static void disconnect(String reason) {
+        if (tasks != null) tasks.cancel(true);
         backendStatus = 1;
         disconnectedReason = reason;
         disconnectAPI();
@@ -225,10 +233,12 @@ public class NetworkStuff {
 
 
     private static void queueString(UUID owner, Function<HttpAPI, HttpRequest> request, BiConsumer<Integer, String> consumer) {
+        if (FSB.connected()) return;
         API_REQUESTS.add(new Request<>(owner, api -> HttpAPI.runString(request.apply(api), consumer)));
     }
 
     private static void queueStream(UUID owner, Function<HttpAPI, HttpRequest> request, BiConsumer<Integer, InputStream> consumer) {
+        if (FSB.connected()) return;
         API_REQUESTS.add(new Request<>(owner, api -> HttpAPI.runStream(request.apply(api), consumer)));
     }
 
@@ -241,6 +251,7 @@ public class NetworkStuff {
     }
 
     private static void connectAPI(String token) {
+        if (FSB.connected()) return;
         api = new HttpAPI(token);
         checkVersion();
         setLimits();
@@ -252,6 +263,7 @@ public class NetworkStuff {
     }
 
     private static void checkAPI() {
+        if (FSB.connected()) return;
         async(() -> {
             if (api == null) {
                 reAuth();
@@ -279,6 +291,12 @@ public class NetworkStuff {
     }
 
     public static void setLimits() {
+        if (FSB.connected()) {
+            uploadRate.set(0.95);
+            downloadRate.set(0.95);
+            maxAvatarSize = FSB.handshake().maxAvatarSize();
+        }
+
         queueString(Util.NIL_UUID, HttpAPI::getLimits, (code, data) -> {
             responseDebug("setLimits", code, data);
             JsonObject json = JsonParser.parseString(data).getAsJsonObject();
@@ -295,6 +313,11 @@ public class NetworkStuff {
     public static void getUser(UserData user) {
         if (checkUUID(user.id))
             return;
+
+        if (FSB.connected()) {
+            FSB.getUser(user);
+            return;
+        }
 
         queueString(user.id, api -> api.getUser(user.id), (code, data) -> {
             //debug
@@ -342,25 +365,35 @@ public class NetworkStuff {
                 if (cat != null) PermissionManager.setDefaultFor(user.id, cat);
             }
 
-            user.loadData(avatars, badgesPair);
+            if (!FSB.connected()) user.loadData(avatars, badgesPair);
         });
     }
 
+    // TODO: multiple modes of upload (Backend, FSB, Backend + FSB)
     public static void uploadAvatar(Avatar avatar) {
         if (avatar == null || avatar.nbt == null)
             return;
 
         String id = avatar.id == null || true ? "avatar" : avatar.id; //TODO - profile screen
 
+
+
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             NbtIo.writeCompressed(avatar.nbt, baos);
+
+            if (FSB.connected()) {
+                FSB.uploadAvatar(id, baos.toByteArray());
+                return;
+            }
+
             queueString(Util.NIL_UUID, api -> api.uploadAvatar(id, baos.toByteArray()), (code, data) -> {
                 responseDebug("uploadAvatar", code, data);
 
                 if (code == 200) {
                     //TODO - profile screen
-                    equipAvatar(List.of(Pair.of(avatar.owner, id)));
+                    if (FSB.connected()) FSB.equipAvatar(List.of(Pair.of(id, getHash(baos.toByteArray()))));
+                    else equipAvatar(List.of(Pair.of(avatar.owner, id)));
                     AvatarManager.localUploaded = true;
                 }
 
@@ -381,6 +414,12 @@ public class NetworkStuff {
 
     public static void deleteAvatar(String avatar) {
         String id = avatar == null || true ? "avatar" : avatar; //TODO - profile screen
+
+        if (FSB.connected()) {
+            FSB.deleteAvatar(id);
+            return;
+        }
+
         queueString(Util.NIL_UUID, api -> api.deleteAvatar(id), (code, data) -> {
             responseDebug("deleteAvatar", code, data);
 
@@ -413,6 +452,10 @@ public class NetworkStuff {
         if (checkUUID(target.id))
             return;
 
+        if (FSB.connected()) {
+            FSB.getAvatar(target, hash);
+        }
+
         queueStream(target.id, api -> api.getAvatar(owner, id), (code, stream) -> {
             String s;
             try {
@@ -443,6 +486,7 @@ public class NetworkStuff {
 
 
     private static void connectWS(String token) {
+        if (FSB.connected()) return;
         if (ws != null) ws.disconnect();
         try {
             ws = KeyStoreHelper.websocketWithBackendCertificates(token);
@@ -466,8 +510,11 @@ public class NetworkStuff {
             return;
 
         try {
-            ByteBuffer buffer = C2SMessageHandler.ping(id, sync, data);
-            ws.sendBinary(buffer.array());
+            if (!FSB.connected()) {
+                ByteBuffer buffer = C2SMessageHandler.ping(id, sync, data);
+                ws.sendBinary(buffer.array());
+            }
+            else FSB.sendPacket(new C2SPingPacket(id, sync, data));
 
             pingsSent++;
             if (lastPing == 0) lastPing = FiguraMod.ticks;
@@ -477,6 +524,7 @@ public class NetworkStuff {
     }
 
     private static void subscribe(UUID id) {
+        if (FSB.connected()) return;
         if (checkUUID(id) || !checkWS())
             return;
 
@@ -492,6 +540,7 @@ public class NetworkStuff {
     }
 
     private static void unsubscribe(UUID id) {
+        if (FSB.connected()) return;
         if (checkUUID(id) || !checkWS())
             return;
 
@@ -539,11 +588,11 @@ public class NetworkStuff {
 
 
     public static boolean isConnected() {
-        return api != null && checkWS();
+        return FSB.connected() || api != null && checkWS();
     }
 
     public static boolean canUpload() {
-        return isConnected() && uploadRate.check();
+        return FSB.connected() || isConnected() && uploadRate.check();
     }
 
     public static int getSizeLimit() {
