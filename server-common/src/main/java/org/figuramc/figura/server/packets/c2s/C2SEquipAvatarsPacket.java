@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class C2SEquipAvatarsPacket implements Packet {
-    public static final Identifier PACKET_ID = new Identifier("figura", "avatars/equip");
+    public static final Identifier PACKET_ID = new Identifier("figura", "c2s/avatars/equip");
     private final HashMap<String, EHashPair> avatars;
 
     public C2SEquipAvatarsPacket(HashMap<String, EHashPair> pairs) {

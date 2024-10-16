@@ -10,7 +10,7 @@ import java.util.UUID;
  * Packet sent to server in order to get player's userdata
  */
 public class C2SFetchUserdataPacket implements Packet {
-    public static final Identifier PACKET_ID = new Identifier("figura", "userdata");
+    public static final Identifier PACKET_ID = new Identifier("figura", "c2s/userdata");
 
     private final UUID target;
 
