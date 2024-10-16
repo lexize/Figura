@@ -42,7 +42,7 @@ public abstract class ClientPacketListenerMixin {
     @Inject(method = "handleCustomPayload", at = @At("HEAD"), cancellable = true)
     private void onCustomPayload(CustomPacketPayload payload, CallbackInfo ci) {
         if (payload instanceof PayloadWrapper wrapper) {
-            var handler = Handlers.getHandler(payload.id());
+            var handler = Handlers.getHandler(payload.());
             if (handler != null) {
                 handler.handle(wrapper.source());
                 ci.cancel();

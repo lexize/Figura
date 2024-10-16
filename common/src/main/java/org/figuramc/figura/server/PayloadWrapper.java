@@ -13,18 +13,13 @@ public class PayloadWrapper implements CustomPacketPayload {
         this.source = source;
     }
 
-    @Override
-    public void write(FriendlyByteBuf buf) {
-        source.write(new FriendlyByteBufWrapper(buf));
-    }
-
     public Packet source() {
         return source;
     }
 
     @Override
-    public ResourceLocation id() {
+    public Type<? extends CustomPacketPayload> type() {
         var id = source.getId();
-        return new ResourceLocation(id.namespace(), id.path());
+        return new Type<>(new ResourceLocation(id.namespace(), id.path()));
     }
 }
