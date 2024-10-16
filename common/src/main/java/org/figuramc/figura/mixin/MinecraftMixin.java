@@ -12,6 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
+import org.figuramc.figura.backend2.FSB;
 import org.figuramc.figura.backend2.NetworkStuff;
 import org.figuramc.figura.config.Configs;
 import org.figuramc.figura.gui.ActionWheel;
@@ -130,6 +131,7 @@ public abstract class MinecraftMixin {
         AvatarManager.clearAllAvatars();
         FiguraLuaPrinter.clearPrintQueue();
         NetworkStuff.unsubscribeAll();
+        FSB.onDisconnect();
     }
 
     @Inject(at = @At("RETURN"), method = "setLevel")
