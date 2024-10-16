@@ -20,6 +20,7 @@
     "LivingEntityMixin",
     "MinecraftMixin",
     "ReloadableResourceManagerMixin",
+    "ServerDataMixin",
     "SkullBlockEntityAccessor",
     "SNIHelperMixin",
     "TextDisplayMixin",
@@ -35,6 +36,7 @@
     "gui.ChatScreenMixin",
     "gui.ClickEventActionMixin",
     "gui.DebugScreenOverlayMixin",
+    "gui.EditServerScreenMixin",
     "gui.GuiAccessor",
     "gui.GuiMessageLineMixin",
     "gui.GuiMessageMixin",
@@ -55,6 +57,7 @@
     "input.KeyMappingAccessor",
     "input.KeyMappingMixin",
     "input.MouseHandlerMixin",
+    "network.client.ClientboundCustomPayloadMixin",
     "particle.ParticleAccessor",
     "particle.ParticleEngineMixin",
     "particle.SingleQuadParticleMixin",
@@ -97,6 +100,10 @@
     "sound.SubtitleOverlayMixin"
   ],
   "server": [
+    "network.server.MinecraftServerMixin",
+    "network.server.PlayerListMixin",
+    "network.server.ServerboundCustomPayloadMixin",
+    "network.server.ServerCommonNetworkingHandlerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

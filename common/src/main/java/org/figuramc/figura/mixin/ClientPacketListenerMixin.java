@@ -2,11 +2,17 @@ package org.figuramc.figura.mixin;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
 import net.minecraft.world.level.Level;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
+import org.figuramc.figura.server.PayloadWrapper;
+import org.figuramc.figura.server.packets.Packet;
+import org.figuramc.figura.server.packets.handlers.s2c.Handlers;
+import org.figuramc.figura.server.packets.handlers.s2c.S2CPacketHandler;
+import org.figuramc.figura.utils.FriendlyByteBufWrapper;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -31,5 +37,16 @@ public abstract class ClientPacketListenerMixin {
         Avatar avatar = AvatarManager.getAvatar(packet.getEntity(level));
         if (avatar != null && avatar.totemEvent())
             ci.cancel();
+    }
+
+    @Inject(method = "handleCustomPayload", at = @At("HEAD"), cancellable = true)
+    private void onCustomPayload(CustomPacketPayload payload, CallbackInfo ci) {
+        if (payload instanceof PayloadWrapper wrapper) {
+            var handler = Handlers.getHandler(payload.id());
+            if (handler != null) {
+                handler.handle(wrapper.source());
+                ci.cancel();
+            }
+        }
     }
 }
