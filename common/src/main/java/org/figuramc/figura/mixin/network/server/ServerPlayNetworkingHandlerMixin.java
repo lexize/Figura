@@ -1,9 +1,7 @@
 package org.figuramc.figura.mixin.network.server;
 
-import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.figuramc.figura.server.FiguraModServer;
 import org.figuramc.figura.server.FiguraServer;
