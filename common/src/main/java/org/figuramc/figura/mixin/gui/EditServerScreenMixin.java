@@ -28,7 +28,7 @@ public abstract class EditServerScreenMixin extends Screen {
         super(title);
     }
 
-    @Inject(method = "init", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/EditServerScreen;setInitialFocus(Lnet/minecraft/client/gui/components/events/GuiEventListener;)V"))
+    @Inject(method = "init", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/EditServerScreen;updateAddButtonStatus()V"))
     private void onInit(CallbackInfo ci) {
         int x = this.width / 2 + 102;
         int y = this.height / 4 + 72;
