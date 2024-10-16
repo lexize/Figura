@@ -6,7 +6,7 @@ import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Identifier;
 
 public class S2CInitializeAvatarStreamPacket implements Packet {
-    public static final Identifier PACKET_ID = new Identifier("figura", "stream/init");
+    public static final Identifier PACKET_ID = new Identifier("figura", "s2c/stream/init");
 
     private final int streamId;
     private final Hash hash;

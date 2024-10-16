@@ -5,7 +5,7 @@ import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Identifier;
 
 public class C2SPingPacket implements Packet {
-    public static final Identifier PACKET_ID = new Identifier("figura", "ping");
+    public static final Identifier PACKET_ID = new Identifier("figura", "c2s/ping");
     public static final int MAX_PING_SIZE = 32767 - 21; // Max size of ping that is possible to send
 
     private final int id;

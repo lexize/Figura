@@ -9,7 +9,7 @@ import org.figuramc.figura.server.utils.Identifier;
  * Can't be sent by current Figura client v0.1.4 and less, so it is basically made just for future versions.
  */
 public class C2SFetchOwnedAvatarsPacket implements Packet {
-    public static final Identifier PACKET_ID = new Identifier("figura", "avatars/owned");
+    public static final Identifier PACKET_ID = new Identifier("figura", "c2s/avatars/owned");
     @Override
     public void write(IFriendlyByteBuf buf) {
 

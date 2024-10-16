@@ -7,7 +7,7 @@ import org.figuramc.figura.server.utils.Identifier;
 import java.util.UUID;
 
 public class S2CPingPacket implements Packet {
-    public static final Identifier PACKET_ID = new Identifier("figura", "ping");
+    public static final Identifier PACKET_ID = new Identifier("figura", "s2c/ping");
 
     private final UUID sender;
     private final int id;

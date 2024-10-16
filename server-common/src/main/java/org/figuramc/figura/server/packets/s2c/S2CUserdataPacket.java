@@ -14,7 +14,7 @@ import java.util.UUID;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class S2CUserdataPacket implements Packet {
-    public static final Identifier PACKET_ID = new Identifier("figura", "userdata");
+    public static final Identifier PACKET_ID = new Identifier("figura", "s2c/userdata");
 
     private final UUID target;
     private final BitSet prideBadges;

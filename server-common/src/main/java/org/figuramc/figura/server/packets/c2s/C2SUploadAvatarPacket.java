@@ -8,7 +8,7 @@ import org.figuramc.figura.server.utils.Identifier;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class C2SUploadAvatarPacket implements Packet {
-    public static final Identifier PACKET_ID = new Identifier("figura", "avatars/upload");
+    public static final Identifier PACKET_ID = new Identifier("figura", "c2s/avatars/upload");
 
     private final int streamId;
     private final String avatarId;

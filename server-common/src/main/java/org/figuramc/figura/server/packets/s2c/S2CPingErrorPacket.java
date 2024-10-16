@@ -5,7 +5,7 @@ import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Identifier;
 
 public class S2CPingErrorPacket implements Packet {
-    public static final Identifier PACKET_ID = new Identifier("figura", "ping/error");
+    public static final Identifier PACKET_ID = new Identifier("figura", "s2c/ping/error");
 
     private final Error error;
 
