@@ -6,7 +6,7 @@ import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket;
+import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.resources.ResourceLocation;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
@@ -15,6 +15,7 @@ import org.figuramc.figura.avatar.UserData;
 import org.figuramc.figura.avatar.local.CacheAvatarLoader;
 import org.figuramc.figura.ducks.ServerDataAccessor;
 import org.figuramc.figura.gui.FiguraToast;
+import org.figuramc.figura.server.PayloadWrapper;
 import org.figuramc.figura.server.avatars.EHashPair;
 import org.figuramc.figura.server.packets.AvatarDataPacket;
 import org.figuramc.figura.server.packets.CloseIncomingStreamPacket;
@@ -52,16 +53,17 @@ public class FSB {
         return s2CHandshake;
     }
 
-    public static boolean handleHandshake(S2CBackendHandshakePacket packet, boolean login, @Nullable ServerData sd) {
-        ServerDataAccessor data = (ServerDataAccessor) (sd != null ? sd : Minecraft.getInstance().getCurrentServer());
+    public static boolean handleHandshake(S2CBackendHandshakePacket packet) {
+        ServerDataAccessor data = (ServerDataAccessor) Minecraft.getInstance().getCurrentServer();
         if (data != null && data.figura$allowFigura()) {
             s2CHandshake = packet;
             NetworkStuff.disconnect("Connected to FSB");
             state = State.Connected;
-            if (!login) sendPacket(new C2SBackendHandshakePacket());
+            sendPacket(new C2SBackendHandshakePacket());
             NetworkStuff.setLimits();
             NetworkStuff.backendStatus = 4;
             FiguraToast.sendToast(FiguraText.of("backend.fsb_connected"));
+            AvatarManager.clearAllAvatars(); // Used to make FSB fetch avatars of all players from FSB
             return true;
         }
         return false;
@@ -170,10 +172,7 @@ public class FSB {
     }
 
     public static void sendPacket(Packet packet) {
-        var byteBuf = new FriendlyByteBuf(Unpooled.buffer());
-        packet.write(new FriendlyByteBufWrapper(byteBuf));
-        var resPath = new ResourceLocation(packet.getId().namespace(), packet.getId().path());
-        Minecraft.getInstance().getConnection().send(new ServerboundCustomPayloadPacket(resPath, byteBuf));
+        Minecraft.getInstance().getConnection().send(new ServerboundCustomPayloadPacket(new PayloadWrapper(packet)));
     }
 
     public static Hash getEHash(Hash hash) {
