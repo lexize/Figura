@@ -183,7 +183,7 @@ public abstract class FiguraServer {
         }
     }
 
-    public final void sendDeferredPacket(UUID receiver, CompletableFuture<? extends Packet> packet) {
+    public final synchronized void sendDeferredPacket(UUID receiver, CompletableFuture<? extends Packet> packet) {
         deferredPacketsQueue.sendPacket(receiver, packet);
     }
 
