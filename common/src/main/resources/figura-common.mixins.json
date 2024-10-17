@@ -4,9 +4,11 @@
   "package": "org.figuramc.figura.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "network.ClientboundCustomPayloadMixin",
+    "network.CustomPayloadCodecMixin",
+    "network.ServerboundCustomPayloadMixin"
   ],
   "client": [
-    "MinecraftAccesor",
     "AABBInvoker",
     "BiomeAccessor",
     "BlockBehaviourAccessor",
@@ -18,6 +20,7 @@
     "ItemStackMixin",
     "LivingEntityAccessor",
     "LivingEntityMixin",
+    "MinecraftAccesor",
     "MinecraftMixin",
     "ReloadableResourceManagerMixin",
     "ServerDataMixin",
@@ -56,7 +59,6 @@
     "input.KeyMappingAccessor",
     "input.KeyMappingMixin",
     "input.MouseHandlerMixin",
-    "network.client.ClientboundCustomPayloadMixin",
     "particle.ParticleAccessor",
     "particle.ParticleEngineMixin",
     "particle.SingleQuadParticleMixin",
@@ -67,6 +69,7 @@
     "render.MissingTextureAtlasSpriteAccessor",
     "render.ModelManagerAccessor",
     "render.PlayerModelMixin",
+    "render.PoseStackAccessor",
     "render.TextureAtlasAccessor",
     "render.TextureManagerAccessor",
     "render.layers.CapeLayerMixin",
@@ -91,7 +94,6 @@
     "render.renderers.SignRendererMixin",
     "render.renderers.SkullBlockRendererMixin",
     "render.renderers.TridentRendererMixin",
-    "render.PoseStackAccessor",
     "sound.ChannelHandleMixin",
     "sound.SoundEngineMixin",
     "sound.SoundManagerAccessor",
@@ -100,7 +102,6 @@
   "server": [
     "network.server.MinecraftServerMixin",
     "network.server.PlayerListMixin",
-    "network.server.ServerboundCustomPayloadMixin",
     "network.server.ServerCommonNetworkingHandlerMixin"
   ],
   "injectors": {
