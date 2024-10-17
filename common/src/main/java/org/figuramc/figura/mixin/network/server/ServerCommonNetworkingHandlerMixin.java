@@ -27,7 +27,6 @@ public abstract class ServerCommonNetworkingHandlerMixin {
         if (payload instanceof PayloadWrapper wrapper) {
             var gameProfile = this.playerProfile();
             var source = wrapper.source();
-            srv.logInfo(source.getId().toString());
             C2SPacketHandler<Packet> handler = srv.getPacketHandler(source.getId());
             if (handler != null) {
                 try {

@@ -44,7 +44,6 @@ public abstract class ClientPacketListenerMixin {
         if (payload instanceof PayloadWrapper wrapper) {
             var packet = wrapper.source();
             var handler = Handlers.getHandler(packet.getId());
-            FiguraMod.LOGGER.info("{}", packet.getId());
             if (handler != null) {
                 handler.handle(packet);
                 ci.cancel();
