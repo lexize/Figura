@@ -1,6 +1,7 @@
 package org.figuramc.figura.mixin.network.server;
 
 import com.mojang.authlib.GameProfile;
+import net.minecraft.network.DisconnectionDetails;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -42,7 +43,7 @@ public abstract class ServerCommonNetworkingHandlerMixin {
     }
 
     @Inject(method = "onDisconnect", at = @At("HEAD"))
-    private void onPlayerDisconnect(Component reason, CallbackInfo ci) {
+    private void onPlayerDisconnect (DisconnectionDetails disconnectionDetails, CallbackInfo ci) {
         if (!FiguraServer.initialized()) return;
         FiguraModServer.getInstance().userManager().onUserLeave(playerProfile().getId());
     }
