@@ -3,6 +3,7 @@ package org.figuramc.figura.server;
 import org.figuramc.figura.server.avatars.EHashPair;
 import org.figuramc.figura.server.packets.CustomFSBPacket;
 import org.figuramc.figura.server.packets.Packet;
+import org.figuramc.figura.server.packets.s2c.S2CNotifyPacket;
 import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.InputStreamByteBuf;
@@ -190,6 +191,10 @@ public final class FiguraUser {
         return removeEquippedAvatar(avatarId).thenRunAsync(() -> {
             equippedAvatars.put(avatarId, new EHashPair(hash, ehash));
             FiguraServer.getInstance().avatarManager().getAvatarMetadata(hash).join().equipped().put(uuid(), ehash);
+            FiguraServer.getInstance().userManager().forEachUser(user -> {
+                if (user != this)
+                    user.sendDeferredPacket(CompletableFuture.supplyAsync(() -> new S2CNotifyPacket(this.uuid())));
+            });
         });
     }
 
