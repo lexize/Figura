@@ -4,10 +4,8 @@ import org.figuramc.figura.server.packets.c2s.*;
 import org.figuramc.figura.server.packets.s2c.*;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Identifier;
-import org.figuramc.figura.server.utils.Pair;
 
 import java.util.HashMap;
-import java.util.List;
 
 public interface Packet {
     void write(IFriendlyByteBuf buf);
@@ -35,6 +33,7 @@ public interface Packet {
         put(S2CPingErrorPacket.PACKET_ID, S2CPingErrorPacket::new);
         put(S2CPingPacket.PACKET_ID, S2CPingPacket::new);
         put(S2CUserdataPacket.PACKET_ID, S2CUserdataPacket::new);
+        put(S2CNotifyPacket.PACKET_ID, S2CNotifyPacket::new);
 
         put(AllowIncomingStreamPacket.PACKET_ID, AllowIncomingStreamPacket::new);
         put(AvatarDataPacket.PACKET_ID, AvatarDataPacket::new);

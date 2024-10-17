@@ -18,6 +18,7 @@ public class Handlers {
         put(AllowIncomingStreamPacket.PACKET_ID, new AllowOutcomingStreamPacketHandler());
         put(S2CPingPacket.PACKET_ID, new S2CPingPacketHandler());
         put(S2CPingErrorPacket.PACKET_ID, new S2CPingErrorPacketHandler());
+        put(S2CNotifyPacket.PACKET_ID, new S2CNotifyPacketHandler());
         put(CustomFSBPacket.PACKET_ID, new S2CCustomFSBPacketHandler());
     }};
 
