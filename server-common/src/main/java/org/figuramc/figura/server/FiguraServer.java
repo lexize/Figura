@@ -124,6 +124,7 @@ public abstract class FiguraServer {
             try (FileInputStream fis = new FileInputStream(cfg)) {
                 String configString = new String(fis.readAllBytes(), StandardCharsets.UTF_8);
                 config = GSON.fromJson(configString, FiguraServerConfig.class);
+                return;
             }
             catch (Exception ignored) {}
         }
