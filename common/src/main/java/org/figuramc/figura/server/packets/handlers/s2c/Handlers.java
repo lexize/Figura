@@ -21,8 +21,12 @@ public class Handlers {
         put(CustomFSBPacket.PACKET_ID, new S2CCustomFSBPacketHandler());
     }};
 
+    public static S2CPacketHandler<Packet> getHandler(Identifier identifier) {
+        return (S2CPacketHandler<Packet>) PACKET_HANDLERS.get(identifier);
+    }
+
     public static S2CPacketHandler<Packet> getHandler(ResourceLocation resLoc) {
         Identifier identifier = new Identifier(resLoc.getNamespace(), resLoc.getPath());
-        return (S2CPacketHandler<Packet>) PACKET_HANDLERS.get(identifier);
+        return getHandler(identifier);
     }
 }
