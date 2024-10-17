@@ -1,0 +1,3 @@
+name: Figura
+main: org.figuramc.figura.server.FiguraSpigot
+version: ${version}

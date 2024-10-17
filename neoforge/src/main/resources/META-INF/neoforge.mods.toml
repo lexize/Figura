@@ -23,14 +23,14 @@ modId = "neoforge"
 mandatory = true
 versionRange = "[21.0,)"
 ordering = "NONE"
-side = "CLIENT"
+side = "BOTH"
 
 [[dependencies.figura]]
 modId = "minecraft"
 mandatory = true
 versionRange = "[${minecraft_version},)"
 ordering = "NONE"
-side = "CLIENT"
+side = "BOTH"
 
 [[mixins]]
 config = "figura-common.mixins.json"

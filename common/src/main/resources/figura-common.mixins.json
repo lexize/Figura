@@ -4,9 +4,11 @@
   "package": "org.figuramc.figura.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "network.ClientboundCustomPayloadMixin",
+    "network.CustomPayloadCodecMixin",
+    "network.ServerboundCustomPayloadMixin"
   ],
   "client": [
-    "MinecraftAccesor",
     "AABBInvoker",
     "BiomeAccessor",
     "BlockBehaviourAccessor",
@@ -18,8 +20,10 @@
     "ItemStackMixin",
     "LivingEntityAccessor",
     "LivingEntityMixin",
+    "MinecraftAccesor",
     "MinecraftMixin",
     "ReloadableResourceManagerMixin",
+    "ServerDataMixin",
     "SkullBlockEntityAccessor",
     "SNIHelperMixin",
     "TextDisplayMixin",
@@ -35,6 +39,7 @@
     "gui.ChatScreenMixin",
     "gui.ClickEventActionMixin",
     "gui.DebugScreenOverlayMixin",
+    "gui.EditServerScreenMixin",
     "gui.GuiAccessor",
     "gui.GuiMessageLineMixin",
     "gui.GuiMessageMixin",
@@ -64,6 +69,7 @@
     "render.MissingTextureAtlasSpriteAccessor",
     "render.ModelManagerAccessor",
     "render.PlayerModelMixin",
+    "render.PoseStackAccessor",
     "render.TextureAtlasAccessor",
     "render.TextureManagerAccessor",
     "render.layers.CapeLayerMixin",
@@ -88,13 +94,15 @@
     "render.renderers.SignRendererMixin",
     "render.renderers.SkullBlockRendererMixin",
     "render.renderers.TridentRendererMixin",
-    "render.PoseStackAccessor",
     "sound.ChannelHandleMixin",
     "sound.SoundEngineMixin",
     "sound.SoundManagerAccessor",
     "sound.SubtitleOverlayMixin"
   ],
   "server": [
+    "network.server.MinecraftServerMixin",
+    "network.server.PlayerListMixin",
+    "network.server.ServerCommonNetworkingHandlerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

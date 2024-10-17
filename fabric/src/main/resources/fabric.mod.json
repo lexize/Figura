@@ -19,7 +19,7 @@
   "license": "LGPL-2.1",
   "icon": "assets/figura/icon.png",
 
-  "environment": "client",
+  "environment": "*",
   "entrypoints": {
     "client": [
       "org.figuramc.figura.fabric.FiguraModFabric"
