@@ -17,10 +17,8 @@ public class CustomPayloadCodecMixin {
     @Inject(method = "findCodec", at = @At("HEAD"), cancellable = true)
     private void onFindCodec(ResourceLocation id, CallbackInfoReturnable<StreamCodec<? super FriendlyByteBuf, ? extends CustomPacketPayload>> cir) {
         Identifier ident = new Identifier(id.getNamespace(), id.getPath());
-        System.out.println("Ident is %s".formatted(ident));
         Packet.Deserializer deserializer = Packet.PACKETS.get(ident);
         if (deserializer != null) {
-            System.out.println("Found deserializer");
             cir.setReturnValue(new CustomPayloadCodec(deserializer));
         }
     }
