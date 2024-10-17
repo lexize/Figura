@@ -52,13 +52,13 @@ public class FSB {
         return s2CHandshake;
     }
 
-    public static boolean handleHandshake(S2CBackendHandshakePacket packet, boolean login, @Nullable ServerData sd) {
-        ServerDataAccessor data = (ServerDataAccessor) (sd != null ? sd : Minecraft.getInstance().getCurrentServer());
+    public static boolean handleHandshake(S2CBackendHandshakePacket packet) {
+        ServerDataAccessor data = (ServerDataAccessor) Minecraft.getInstance().getCurrentServer();
         if (data != null && data.figura$allowFigura()) {
             s2CHandshake = packet;
             NetworkStuff.disconnect("Connected to FSB");
             state = State.Connected;
-            if (!login) sendPacket(new C2SBackendHandshakePacket());
+            sendPacket(new C2SBackendHandshakePacket());
             NetworkStuff.setLimits();
             NetworkStuff.backendStatus = 4;
             FiguraToast.sendToast(FiguraText.of("backend.fsb_connected"));

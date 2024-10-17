@@ -15,7 +15,9 @@ public class PlayerListMixin {
     @Inject(method = "placeNewPlayer", at = @At("RETURN"))
     private void onPlayerConnect(Connection connection, ServerPlayer player, CallbackInfo ci) {
         var srv = FiguraModServer.getInstance();
-        if (FiguraServer.initialized())
+        if (FiguraServer.initialized()) {
+            srv.sendHandshake(player.getUUID());
             srv.userManager().onUserJoin(player.getUUID());
+        }
     }
 }

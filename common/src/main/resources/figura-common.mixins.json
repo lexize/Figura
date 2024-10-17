@@ -56,7 +56,6 @@
     "input.KeyMappingAccessor",
     "input.KeyMappingMixin",
     "input.MouseHandlerMixin",
-    "network.client.ClientLoginNetworkingHandlerMixin",
     "particle.ParticleAccessor",
     "particle.ParticleEngineMixin",
     "particle.SingleQuadParticleMixin",
@@ -101,8 +100,7 @@
   "server": [
     "network.server.MinecraftServerMixin",
     "network.server.PlayerListMixin",
-    "network.server.ServerPlayNetworkingHandlerMixin",
-    "network.server.ServerLoginNetworkingHandlerMixin"
+    "network.server.ServerPlayNetworkingHandlerMixin"
   ],
   "injectors": {
     "defaultRequire": 1
