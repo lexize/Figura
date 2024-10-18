@@ -15,19 +15,18 @@ public class C2SUploadAvatarPacketHandler extends AuthorizedC2SPacketHandler<C2S
 
     @Override
     protected void handle(FiguraUser sender, C2SUploadAvatarPacket packet) {
-        sender.sendDeferredPacket(parent.avatarManager().avatarExists(packet.hash()).thenApplyAsync(avatarExists -> {
-            if (getNewAvatarsCount(sender, packet.avatarId()) > parent.config().avatarsCountLimit()) {
-                return new CloseIncomingStreamPacket(packet.streamId(), StatusCode.TOO_MANY_AVATARS);
-            }
-            if (avatarExists) {
-                sender.replaceOrAddOwnedAvatar(packet.avatarId(), packet.hash(), packet.ehash());
-                return new CloseIncomingStreamPacket(packet.streamId(), StatusCode.ALREADY_EXISTS);
-            }
-            else {
-                parent.avatarManager().receiveAvatar(sender, packet.avatarId(), packet.streamId(), packet.hash(), packet.ehash());
-                return new AllowIncomingStreamPacket(packet.streamId());
-            }
-        }));
+        boolean avatarExists = parent.avatarManager().avatarExists(packet.hash());
+        if (getNewAvatarsCount(sender, packet.avatarId()) > parent.config().avatarsCountLimit()) {
+            sender.sendPacket(new CloseIncomingStreamPacket(packet.streamId(), StatusCode.TOO_MANY_AVATARS));
+        }
+        if (avatarExists) {
+            sender.replaceOrAddOwnedAvatar(packet.avatarId(), packet.hash(), packet.ehash());
+            sender.sendPacket(new CloseIncomingStreamPacket(packet.streamId(), StatusCode.ALREADY_EXISTS));
+        }
+        else {
+            parent.avatarManager().receiveAvatar(sender, packet.avatarId(), packet.streamId(), packet.hash(), packet.ehash());
+            sender.sendPacket(new AllowIncomingStreamPacket(packet.streamId()));
+        }
     }
 
     private int getNewAvatarsCount(FiguraUser user, String id) {

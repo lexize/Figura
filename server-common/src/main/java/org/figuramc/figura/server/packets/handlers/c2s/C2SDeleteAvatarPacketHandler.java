@@ -12,7 +12,8 @@ public class C2SDeleteAvatarPacketHandler extends AuthorizedC2SPacketHandler<C2S
 
     @Override
     protected void handle(FiguraUser sender, C2SDeleteAvatarPacket packet) {
-        sender.removeOwnedAvatar(packet.avatarId()).thenRunAsync(() -> sender.removeEquippedAvatar(packet.avatarId()));
+        sender.removeOwnedAvatar(packet.avatarId());
+        sender.removeEquippedAvatar(packet.avatarId());
     }
 
     @Override

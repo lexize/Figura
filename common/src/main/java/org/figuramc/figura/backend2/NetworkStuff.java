@@ -134,7 +134,6 @@ public class NetworkStuff {
     }
 
     private static void processRequests() {
-        if (FSB.connected()) return;
         if (!API_REQUESTS.isEmpty()) {
             Request<HttpAPI> request;
             while ((request = API_REQUESTS.poll()) != null) {
@@ -153,7 +152,6 @@ public class NetworkStuff {
     }
 
     protected static void async(Runnable toRun) {
-        if (FSB.connected()) return;
         if (tasks == null || tasks.isDone()) {
             tasks = CompletableFuture.runAsync(toRun);
         } else {
@@ -174,14 +172,12 @@ public class NetworkStuff {
 
 
     public static void auth() {
-        if (FSB.connected()) return;
         authCheck = RECONNECT;
         AuthHandler.auth(false);
         fetchMOTD();
     }
 
     public static void reAuth() {
-        if (FSB.connected()) return;
         authCheck = RECONNECT;
         AuthHandler.auth(true);
         fetchMOTD();
@@ -203,8 +199,6 @@ public class NetworkStuff {
 
 
     public static void connect(String token) {
-        if (FSB.connected())
-            return;
         if (isConnected())
             disconnect(null);
 
@@ -233,12 +227,10 @@ public class NetworkStuff {
 
 
     private static void queueString(UUID owner, Function<HttpAPI, HttpRequest> request, BiConsumer<Integer, String> consumer) {
-        if (FSB.connected()) return;
         API_REQUESTS.add(new Request<>(owner, api -> HttpAPI.runString(request.apply(api), consumer)));
     }
 
     private static void queueStream(UUID owner, Function<HttpAPI, HttpRequest> request, BiConsumer<Integer, InputStream> consumer) {
-        if (FSB.connected()) return;
         API_REQUESTS.add(new Request<>(owner, api -> HttpAPI.runStream(request.apply(api), consumer)));
     }
 
@@ -251,7 +243,6 @@ public class NetworkStuff {
     }
 
     private static void connectAPI(String token) {
-        if (FSB.connected()) return;
         api = new HttpAPI(token);
         checkVersion();
         setLimits();
@@ -263,7 +254,6 @@ public class NetworkStuff {
     }
 
     private static void checkAPI() {
-        if (FSB.connected()) return;
         async(() -> {
             if (api == null) {
                 reAuth();
@@ -291,12 +281,6 @@ public class NetworkStuff {
     }
 
     public static void setLimits() {
-        if (FSB.connected()) {
-            uploadRate.set(0.95);
-            downloadRate.set(0.95);
-            maxAvatarSize = FSB.handshake().maxAvatarSize();
-        }
-
         queueString(Util.NIL_UUID, HttpAPI::getLimits, (code, data) -> {
             responseDebug("setLimits", code, data);
             JsonObject json = JsonParser.parseString(data).getAsJsonObject();
@@ -311,11 +295,12 @@ public class NetworkStuff {
     }
 
     public static void getUser(UserData user) {
-        if (checkUUID(user.id))
-            return;
-
         if (FSB.connected()) {
             FSB.getUser(user);
+            return;
+        }
+
+        if (checkUUID(user.id)) {
             return;
         }
 
@@ -449,11 +434,12 @@ public class NetworkStuff {
     }
 
     public static void getAvatar(UserData target, UUID owner, String id, String hash) {
-        if (checkUUID(target.id))
-            return;
-
         if (FSB.connected()) {
             FSB.getAvatar(target, hash);
+        }
+
+        if (checkUUID(target.id)) {
+            return;
         }
 
         queueStream(target.id, api -> api.getAvatar(owner, id), (code, stream) -> {
@@ -524,7 +510,6 @@ public class NetworkStuff {
     }
 
     private static void subscribe(UUID id) {
-        if (FSB.connected()) return;
         if (checkUUID(id) || !checkWS())
             return;
 
@@ -540,7 +525,6 @@ public class NetworkStuff {
     }
 
     private static void unsubscribe(UUID id) {
-        if (FSB.connected()) return;
         if (checkUUID(id) || !checkWS())
             return;
 
@@ -588,7 +572,7 @@ public class NetworkStuff {
 
 
     public static boolean isConnected() {
-        return FSB.connected() || api != null && checkWS();
+        return api != null && checkWS();
     }
 
     public static boolean canUpload() {
@@ -596,7 +580,7 @@ public class NetworkStuff {
     }
 
     public static int getSizeLimit() {
-        return isConnected() ? maxAvatarSize : Integer.MAX_VALUE;
+        return FSB.connected() ? FSB.handshake().maxAvatarSize() : isConnected() ? maxAvatarSize : Integer.MAX_VALUE;
     }
 
 

@@ -6,7 +6,7 @@ import org.figuramc.figura.server.utils.Hash;
 
 import java.util.concurrent.CompletableFuture;
 
-public class StartLoadingMetadataEvent extends ReturnableEvent<CompletableFuture<FiguraServerAvatarManager.AvatarMetadata>> {
+public class StartLoadingMetadataEvent extends ReturnableEvent<FiguraServerAvatarManager.AvatarMetadata> {
     private final Hash hash;
 
     public StartLoadingMetadataEvent(Hash hash) {
