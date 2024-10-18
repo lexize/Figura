@@ -40,30 +40,26 @@ public final class FiguraServerAvatarManager {
         incomingAvatarHandler.acceptChunk(uploader.uuid(), streamId, data, finalChunk);
     }
 
-    public CompletableFuture<Boolean> avatarExists(Hash hash) {
+    public boolean avatarExists(Hash hash) {
         var future = Events.call(new AvatarExistenceFetchEvent(hash));
         if (future.returned()) return future.returnValue();
         var file = parent.getAvatar(hash.get()).toFile();
-        return CompletableFuture.completedFuture(file.exists());
+        return file.exists();
     }
 
-    public CompletableFuture<AvatarMetadata> getAvatarMetadata(Hash hash) {
-        var either = getAvatarHandle(hash).getMetadata();
-        if (either.isA()) return CompletableFuture.completedFuture(either.a());
-        return either.b();
+    public AvatarMetadata getAvatarMetadata(Hash hash) {
+        return getAvatarHandle(hash).getMetadata();
     }
 
     public void tick() {
         List<AvatarHandle> a = List.copyOf(avatars.values());
         a.forEach(AvatarHandle::tick);
-        avatars.entrySet().removeIf((e) -> e.getValue().remove);
+        avatars.entrySet().removeIf((e) -> e.getValue().markedForDeletion);
     }
 
     public void close() {
         avatars.forEach((hash, handle) -> {
-            if (handle.metadata.isA()) {
-                saveMetadata(hash, handle.metadata.a());
-            }
+            saveMetadata(hash, handle.metadata);
         });
         avatars.clear();
     }
@@ -186,7 +182,7 @@ public final class FiguraServerAvatarManager {
         }
 
         public boolean canBeDeleted() {
-            return !cleanupProtection() && owners.isEmpty() && equipped.isEmpty();
+            return (!cleanupProtection()) && owners.isEmpty() && equipped.isEmpty();
         }
     }
 
@@ -265,132 +261,50 @@ public final class FiguraServerAvatarManager {
         }
     }
 
-    private CompletableFuture<Void> deleteAvatar(Hash avatarHash) {
+    private void deleteAvatar(Hash avatarHash) {
         var f = Events.call(new RemoveAvatarDataEvent(avatarHash));
-        if (f.returned()) return f.returnValue();
+        if (f.isCancelled()) return;
         parent.getAvatar(avatarHash.get()).toFile().delete();
         parent.getAvatarMetadata(avatarHash.get()).toFile().delete();
-        return CompletableFuture.completedFuture(null);
-    }
-
-    private abstract class Awaiting {
-        protected final UUID receiver;
-        protected final AvatarHandle parent;
-
-        private Awaiting(UUID receiver, AvatarHandle parent) {
-            this.receiver = receiver;
-            this.parent = parent;
-        }
-
-        public UUID receiver() {
-            return receiver;
-        }
-
-        protected abstract boolean finish();
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof Awaiting awaiting)) return false;
-            return Objects.equals(receiver, awaiting.receiver) && Objects.equals(parent, awaiting.parent);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(receiver, parent);
-        }
-
-        protected abstract boolean acceptDataException(Exception error);
-        protected abstract boolean acceptMetadataException(Exception error);
-    }
-
-    private class AwaitingOutcomingStream extends Awaiting {
-        private final int streamId;
-
-        private AwaitingOutcomingStream(UUID receiver, AvatarHandle parent, int streamId) {
-            super(receiver, parent);
-            this.streamId = streamId;
-        }
-
-        @Override
-        protected boolean finish() {
-            var data = parent.getAvatarData();
-            var metadata = parent.getMetadata();
-            if (data.isA() && metadata.isA()) {
-                parent.streams.add(new AvatarOutcomingStream(receiver, data.a(), streamId,
-                        parent.hash, metadata.a().getOwnerEHash(receiver)));
-                return true;
-            }
-            return false;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof AwaitingOutcomingStream stream)) return false;
-            if (!super.equals(o)) return false;
-            return streamId == stream.streamId;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(super.hashCode(), streamId);
-        }
-
-        @Override
-        protected boolean acceptDataException(Exception error) {
-            // Implement notifying user about an error in loading an avatar
-            return true;
-        }
-
-        @Override
-        protected boolean acceptMetadataException(Exception error) {
-            // Implement notifying user about an error in loading avatar metadata
-            return true;
-        }
     }
 
     private class AvatarHandle {
         private final Hash hash;
-        private Either<AvatarData, CompletableFuture<AvatarData>> data;
-        private Either<AvatarMetadata, CompletableFuture<AvatarMetadata>> metadata;
-        private final ArrayList<Awaiting> awaiting = new ArrayList<>();
+        private AvatarData data;
+        private AvatarMetadata metadata;
         private final ArrayList<AvatarOutcomingStream> streams = new ArrayList<>();
-        private boolean remove;
         private boolean markedForDeletion = false;
-        private CompletableFuture<Void> deleteFuture = null;
 
         private AvatarHandle(Hash hash) {
             this.hash = hash;
         }
 
         private void sendTo(UUID receiver, int streamId) {
-            awaiting.add(new AwaitingOutcomingStream(receiver, this, streamId));
+            streams.add(new AvatarOutcomingStream(receiver, data, streamId,
+                    hash, metadata.getOwnerEHash(receiver)));
         }
 
-        private Either<AvatarData, CompletableFuture<AvatarData>> getAvatarData() {
+        private AvatarData getAvatarData() {
             if (data == null) {
-                data = Either.newB(startLoadingAvatar());
+                data = loadAvatar();
             }
             return data;
         }
 
-        private CompletableFuture<AvatarData> startLoadingAvatar() {
+        private AvatarData loadAvatar() {
             var event = Events.call(new StartLoadingAvatarEvent(hash));
-            if (event.returned()) event.returnValue().thenApplyAsync(this::checkAndFinishLoadingAvatar);
+            if (event.returned()) checkAndFinishLoadingAvatar(event.returnValue());
 
-            return CompletableFuture.supplyAsync(() -> {
-                var inst = FiguraServer.getInstance();
-                Path avatarFile = inst.getAvatar(hash.get());
-                try {
-                    FileInputStream fis = new FileInputStream(avatarFile.toFile());
-                    byte[] data = fis.readAllBytes();
-                    fis.close();
-                    return data;
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }).thenApply(this::checkAndFinishLoadingAvatar);
+            var inst = FiguraServer.getInstance();
+            Path avatarFile = inst.getAvatar(hash.get());
+            try {
+                FileInputStream fis = new FileInputStream(avatarFile.toFile());
+                byte[] data = fis.readAllBytes();
+                fis.close();
+                return checkAndFinishLoadingAvatar(data);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         private AvatarData checkAndFinishLoadingAvatar(byte[] data) {
@@ -399,65 +313,36 @@ public final class FiguraServerAvatarManager {
             return new AvatarData(data);
         }
 
-        private Either<AvatarMetadata, CompletableFuture<AvatarMetadata>> getMetadata() {
+        private AvatarMetadata getMetadata() {
             if (metadata == null) {
-                metadata = Either.newB(startLoadingMetadata());
+                metadata = loadMetadata();
             }
             return metadata;
         }
 
-        private CompletableFuture<AvatarMetadata> startLoadingMetadata() {
+        private AvatarMetadata loadMetadata() {
             var event = Events.call(new StartLoadingMetadataEvent(hash));
             if (event.returned()) return event.returnValue();
 
-            return CompletableFuture.supplyAsync(() -> {
-                var inst = FiguraServer.getInstance();
-                Path avatarFile = inst.getAvatarMetadata(hash.get());
-                try {
-                    FileInputStream fis = new FileInputStream(avatarFile.toFile());
-                    byte[] data = fis.readAllBytes();
-                    fis.close();
-                    return data;
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }).thenApply(AvatarMetadata::read);
+            var inst = FiguraServer.getInstance();
+            Path avatarFile = inst.getAvatarMetadata(hash.get());
+            try {
+                FileInputStream fis = new FileInputStream(avatarFile.toFile());
+                byte[] data = fis.readAllBytes();
+                fis.close();
+                return AvatarMetadata.read(data);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         private void tick() {
-            if (markedForDeletion && deleteFuture.isDone()) {
-                try {
-                    deleteFuture.join();
-                    remove = true;
-                } catch (Exception e) {
-                    Events.call(new AvatarDeletionException(hash, e));
-                }
-            }
             var data = getAvatarData();
             var metadata = getMetadata();
 
-            if (data.isB() && data.b().isDone()) {
-                try {
-                    this.data = Either.newA(data.b().join());
-                } catch (Exception e) {
-                    awaiting.removeIf(a -> a.acceptDataException(e));
-                }
-            }
-
-            if (metadata.isB() && metadata.b().isDone()) {
-                try {
-                    this.metadata = Either.newA(metadata.b().join());
-                } catch (Exception e) {
-                    awaiting.removeIf(a -> a.acceptMetadataException(e));
-                }
-            }
-
-            awaiting.removeIf(Awaiting::finish);
-            if (data.isA()) {
-                data.a().tick();
-            }
-            if (metadata.isA() && metadata.a().canBeDeleted()) {
-                deleteFuture = deleteAvatar(hash);
+            data.tick();
+            if (metadata.canBeDeleted()) {
+                deleteAvatar(hash);
                 markedForDeletion = true;
             }
             streams.forEach(AvatarOutcomingStream::tick);
@@ -541,7 +426,7 @@ public final class FiguraServerAvatarManager {
 
                     // Creating a new avatar handle
                     var avatarHandle = getAvatarHandle(hash);
-                    avatarHandle.data = Either.newA(new AvatarData(avatarData));
+                    avatarHandle.data = new AvatarData(avatarData);
 
                     // Creating empty metadata for this avatar with all the avatar owners
                     AvatarMetadata metadata = new AvatarMetadata();
@@ -553,7 +438,7 @@ public final class FiguraServerAvatarManager {
                     // Writing avatar metadata
                     saveMetadata(hash, metadata);
 
-                    avatarHandle.metadata = Either.newA(metadata);
+                    avatarHandle.metadata = metadata;
 
                     // Finishing work of all streams
                     for (IncomingAvatarKey key: hashesToUploads.get(hash)) {
@@ -577,10 +462,7 @@ public final class FiguraServerAvatarManager {
             private void finish() {
                 close(StatusCode.FINISHED);
                 finished = true;
-                parent.userManager().getUser(uploader)
-                        .thenAcceptAsync( u -> {
-                            u.replaceOrAddOwnedAvatar(avatarId, hash, ehash).join();
-                });
+                parent.userManager().getUser(uploader).replaceOrAddOwnedAvatar(avatarId, hash, ehash);
             }
 
             private boolean isFinished() {
