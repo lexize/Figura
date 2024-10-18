@@ -6,7 +6,7 @@ import org.figuramc.figura.server.utils.Hash;
 
 import java.util.concurrent.CompletableFuture;
 
-public class RemoveAvatarDataEvent extends ReturnableEvent<CompletableFuture<Void>> {
+public class RemoveAvatarDataEvent extends CancellableEvent {
     private final Hash avatarHash;
 
     public RemoveAvatarDataEvent(Hash avatarHash) {

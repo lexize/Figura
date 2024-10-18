@@ -4,7 +4,6 @@ import org.figuramc.figura.server.events.Events;
 import org.figuramc.figura.server.events.users.LoadPlayerDataEvent;
 import org.figuramc.figura.server.events.users.SavePlayerDataEvent;
 import org.figuramc.figura.server.events.users.UserLoadingExceptionEvent;
-import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.server.utils.Either;
 
 import java.nio.file.Path;
@@ -16,7 +15,7 @@ import java.util.function.Consumer;
 
 public final class FiguraUserManager {
     private final FiguraServer parent;
-    private final HashMap<UUID, Either<FiguraUser, FutureHandle>> users = new HashMap<>();
+    private final HashMap<UUID, FiguraUser> users = new HashMap<>();
     private final LinkedList<UUID> expectedUsers = new LinkedList<>();
     private int pingsTickCounter = 0;
 
@@ -24,20 +23,16 @@ public final class FiguraUserManager {
         this.parent = parent;
     }
 
-    public CompletableFuture<FiguraUser> getUserOrNull(UUID playerUUID) {
-        var either = users.get(playerUUID);
-        if (either != null) return wrapHandle(either);
-        return null;
+    public FiguraUser getUserOrNull(UUID playerUUID) {
+        return users.get(playerUUID);
     }
 
     public void onUserJoin(UUID player) {
 
     }
 
-    public CompletableFuture<FiguraUser> getUser(UUID player) {
-        return wrapHandle(users.computeIfAbsent(player, (p) -> Either.newB(
-                new FutureHandle(player, startLoadingPlayerData(player)))
-        ));
+    public FiguraUser getUser(UUID player) {
+        return users.computeIfAbsent(player, (p) -> loadPlayerData(player));
     }
 
     private CompletableFuture<FiguraUser> wrapHandle(Either<FiguraUser, FutureHandle> handle) {
@@ -57,54 +52,42 @@ public final class FiguraUserManager {
         return future;
     }
 
-    public CompletableFuture<Void> setupOnlinePlayer(UUID uuid) {
-        CompletableFuture<FiguraUser> user = getUser(uuid);
+    public void setupOnlinePlayer(UUID uuid) {
+        FiguraUser user = getUser(uuid);
         expectedUsers.remove(uuid); // This is called either way just to remove it in case if it was first time initialization
-        return user.thenAcceptAsync(u -> {
-            u.setOnline();
-            u.update();
-        });
+        user.setOnline();
+        user.update();
     }
 
 
-    private CompletableFuture<FiguraUser> startLoadingPlayerData(UUID player) {
+    private FiguraUser loadPlayerData(UUID player) {
         LoadPlayerDataEvent playerDataEvent = Events.call(new LoadPlayerDataEvent(player));
         if (playerDataEvent.returned()) return playerDataEvent.returnValue();
         Path dataFile = parent.getUserdataFile(player);
-        return CompletableFuture.supplyAsync(() -> FiguraUser.load(player, dataFile));
+        return FiguraUser.load(player, dataFile);
     }
 
     public void forEachUser(Consumer<FiguraUser> func) {
         users.forEach((id, user) -> {
-            if (user.isA() && user.a().online()) {
-                func.accept(user.a());
+            if (user.online()) {
+                func.accept(user);
             }
         });
     }
 
     public void onUserLeave(UUID player) {
         users.computeIfPresent(player, (uuid, pl) -> {
-            if (pl.isA()) {
-                FiguraUser user = pl.a();
-                if (!Events.call(new SavePlayerDataEvent(user)).isCancelled())
-                    user.save(parent.getUserdataFile(user.uuid()));
-                user.setOffline();
-                return pl;
-            }
-            else {
-                pl.b().future.cancel(false);
-                return null;
-            }
+            if (!Events.call(new SavePlayerDataEvent(pl)).isCancelled())
+                pl.save(parent.getUserdataFile(pl.uuid()));
+            pl.setOffline();
+            return pl;
         });
     }
 
     public void close() {
-        for (var handle: users.values()) {
-            if (handle.isA()) {
-                FiguraUser pl = handle.a();
-                if (!Events.call(new SavePlayerDataEvent(pl)).isCancelled())
-                    pl.save(parent.getUserdataFile(pl.uuid()));
-            }
+        for (var user: users.values()) {
+            if (!Events.call(new SavePlayerDataEvent(user)).isCancelled())
+                user.save(parent.getUserdataFile(user.uuid()));
         }
         users.clear();
     }
