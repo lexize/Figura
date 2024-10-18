@@ -24,7 +24,8 @@ public class C2SHandshakeHandler implements C2SPacketHandler<C2SBackendHandshake
     public void handle(UUID sender, C2SBackendHandshakePacket packet) {
         FiguraUserManager manager = parent.userManager();
         if (!manager.isExpected(sender)) return;
-        parent.logDebug("Setting up player");
-        parent.sendDeferredPacket(sender, manager.setupOnlinePlayer(sender).thenApplyAsync((v) -> new S2CConnectedPacket()));
+        parent.logDebug("Setting up player %s".formatted(sender));
+        manager.setupOnlinePlayer(sender);
+        parent.logDebug("Player %s is setup".formatted(sender));
     }
 }

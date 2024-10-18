@@ -156,45 +156,31 @@ public final class FiguraUser {
         online = false;
     }
 
-    public CompletableFuture<Void> removeOwnedAvatar(String avatarId) {
-        if (!ownedAvatars.containsKey(avatarId)) {
-            return CompletableFuture.completedFuture(null);
-        }
-        else {
+    public void removeOwnedAvatar(String avatarId) {
+        if (ownedAvatars.containsKey(avatarId)) {
             EHashPair avatar = ownedAvatars.remove(avatarId);
-            return FiguraServer.getInstance().avatarManager().getAvatarMetadata(avatar.hash()).thenAcceptAsync(m -> {
-                 m.owners().remove(uuid());
-            });
+            FiguraServer.getInstance().avatarManager().getAvatarMetadata(avatar.hash()).owners().remove(uuid());
         }
     }
 
-    public CompletableFuture<Void> removeEquippedAvatar(String avatarId) {
-        if (!equippedAvatars.containsKey(avatarId)) {
-            return CompletableFuture.completedFuture(null);
-        }
-        else {
+    public void removeEquippedAvatar(String avatarId) {
+        if (equippedAvatars.containsKey(avatarId)) {
             EHashPair avatar = equippedAvatars.remove(avatarId);
-            return FiguraServer.getInstance().avatarManager().getAvatarMetadata(avatar.hash()).thenAcceptAsync(m -> {
-                m.equipped().remove(uuid());
-            });
+            FiguraServer.getInstance().avatarManager().getAvatarMetadata(avatar.hash()).equipped().remove(uuid());
         }
     }
 
-    public CompletableFuture<Void> replaceOrAddOwnedAvatar(String avatarId, Hash hash, Hash ehash) {
-        return removeOwnedAvatar(avatarId).thenRunAsync(() -> {
-            ownedAvatars.put(avatarId, new EHashPair(hash, ehash));
-            FiguraServer.getInstance().avatarManager().getAvatarMetadata(hash).join().owners().put(uuid(), ehash);
-        });
+    public void replaceOrAddOwnedAvatar(String avatarId, Hash hash, Hash ehash) {
+        ownedAvatars.put(avatarId, new EHashPair(hash, ehash));
+        FiguraServer.getInstance().avatarManager().getAvatarMetadata(hash).owners().put(uuid(), ehash);
     }
 
-    public CompletableFuture<Void> replaceOrAddEquippedAvatar(String avatarId, Hash hash, Hash ehash) {
-        return removeEquippedAvatar(avatarId).thenRunAsync(() -> {
-            equippedAvatars.put(avatarId, new EHashPair(hash, ehash));
-            FiguraServer.getInstance().avatarManager().getAvatarMetadata(hash).join().equipped().put(uuid(), ehash);
-            FiguraServer.getInstance().userManager().forEachUser(user -> {
-                if (user != this)
-                    user.sendDeferredPacket(CompletableFuture.supplyAsync(() -> new S2CNotifyPacket(this.uuid())));
-            });
+    public void replaceOrAddEquippedAvatar(String avatarId, Hash hash, Hash ehash) {
+        equippedAvatars.put(avatarId, new EHashPair(hash, ehash));
+        FiguraServer.getInstance().avatarManager().getAvatarMetadata(hash).equipped().put(uuid(), ehash);
+        FiguraServer.getInstance().userManager().forEachUser(user -> {
+            if (user != this)
+                user.sendDeferredPacket(CompletableFuture.supplyAsync(() -> new S2CNotifyPacket(this.uuid())));
         });
     }
 
