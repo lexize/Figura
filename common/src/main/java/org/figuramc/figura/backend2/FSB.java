@@ -58,11 +58,8 @@ public class FSB {
         ServerDataAccessor data = (ServerDataAccessor) Minecraft.getInstance().getCurrentServer();
         if (data != null && data.figura$allowFigura()) {
             s2CHandshake = packet;
-            NetworkStuff.disconnect("Connected to FSB");
             state = State.Connected;
             sendPacket(new C2SBackendHandshakePacket());
-            NetworkStuff.setLimits();
-            NetworkStuff.backendStatus = 4;
             FiguraToast.sendToast(FiguraText.of("backend.fsb_connected"));
             AvatarManager.clearAllAvatars(); // Used to make FSB fetch avatars of all players from FSB
             return true;

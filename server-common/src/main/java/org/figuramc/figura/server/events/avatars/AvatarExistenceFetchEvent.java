@@ -5,7 +5,7 @@ import org.figuramc.figura.server.utils.Hash;
 
 import java.util.concurrent.CompletableFuture;
 
-public class AvatarExistenceFetchEvent extends ReturnableEvent<CompletableFuture<Boolean>> {
+public class AvatarExistenceFetchEvent extends ReturnableEvent<Boolean> {
     private final Hash hash;
 
     public AvatarExistenceFetchEvent(Hash hash) {

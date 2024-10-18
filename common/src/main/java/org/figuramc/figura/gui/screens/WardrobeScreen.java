@@ -9,6 +9,7 @@ import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.avatar.local.LocalAvatarFetcher;
 import org.figuramc.figura.avatar.local.LocalAvatarLoader;
+import org.figuramc.figura.backend2.FSB;
 import org.figuramc.figura.backend2.NetworkStuff;
 import org.figuramc.figura.config.Configs;
 import org.figuramc.figura.gui.FiguraToast;
@@ -246,7 +247,7 @@ public class WardrobeScreen extends AbstractPanelScreen {
         // backend buttons
         Avatar avatar;
         upload.setActive(NetworkStuff.canUpload() && !AvatarManager.localUploaded && (avatar = AvatarManager.getAvatarForPlayer(FiguraMod.getLocalPlayerUUID())) != null && avatar.nbt != null && avatar.loaded);
-        delete.setActive(NetworkStuff.isConnected() && AvatarManager.localUploaded);
+        delete.setActive((FSB.connected() || NetworkStuff.isConnected()) && AvatarManager.localUploaded);
 
         updateMotdWidget();
     }

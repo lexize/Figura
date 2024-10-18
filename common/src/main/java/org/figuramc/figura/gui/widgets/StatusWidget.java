@@ -11,6 +11,7 @@ import net.minecraft.network.chat.Style;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatar.Avatar;
 import org.figuramc.figura.avatar.AvatarManager;
+import org.figuramc.figura.backend2.FSB;
 import org.figuramc.figura.backend2.NetworkStuff;
 import org.figuramc.figura.utils.FiguraText;
 import org.figuramc.figura.utils.MathUtils;
@@ -72,7 +73,7 @@ public class StatusWidget implements FiguraWidget, FiguraTickable, GuiEventListe
         script = empty ? 0 : avatar.scriptError ? 1 : avatar.luaRuntime == null ? 0 : avatar.versionStatus > 0 ? 2 : 3;
         scriptError = script == 1 ? avatar.errorText.copy() : null;
 
-        backend = NetworkStuff.backendStatus;
+        backend = FSB.connected() ? 4 : NetworkStuff.backendStatus;
 
         String dc = NetworkStuff.disconnectedReason;
         disconnectedReason = backend == 1 && dc != null && !dc.isBlank() ? Component.literal(dc) : null;

@@ -22,21 +22,18 @@ public class C2SFetchUserdataPacketHandler extends AuthorizedC2SPacketHandler<C2
 
     @Override
     protected void handle(FiguraUser sender, C2SFetchUserdataPacket packet) {
-        CompletableFuture<FiguraUser> user = parent.userManager().getUser(packet.target());
+        FiguraUser user = parent.userManager().getUser(packet.target());
         // Future for a packet that will be sent when done
-        CompletableFuture<S2CUserdataPacket> packetFuture = user.thenApplyAsync(u -> {
-            UUID target = u.uuid();
-            HashMap<String, EHashPair> avatars = new HashMap<>();
-            // Collecting hashes for requested user
-            for (Map.Entry<String, EHashPair> entry : u.equippedAvatars().entrySet()) {
-                Hash hash = entry.getValue().hash();
-                Hash ehash = entry.getValue().ehash();
-                avatars.put(entry.getKey(), new EHashPair(hash, ehash));
-            }
-            BitSet badges = u.prideBadges();
-            return new S2CUserdataPacket(target, badges, avatars);
-        });
-        sender.sendDeferredPacket(packetFuture);
+        UUID target = user.uuid();
+        HashMap<String, EHashPair> avatars = new HashMap<>();
+        // Collecting hashes for requested user
+        for (Map.Entry<String, EHashPair> entry : user.equippedAvatars().entrySet()) {
+            Hash hash = entry.getValue().hash();
+            Hash ehash = entry.getValue().ehash();
+            avatars.put(entry.getKey(), new EHashPair(hash, ehash));
+        }
+        BitSet badges = user.prideBadges();
+        sender.sendPacket(new S2CUserdataPacket(target, badges, avatars));
     }
 
     @Override
