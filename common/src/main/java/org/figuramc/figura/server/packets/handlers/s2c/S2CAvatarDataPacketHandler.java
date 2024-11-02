@@ -4,7 +4,7 @@ import org.figuramc.figura.backend2.FSB;
 import org.figuramc.figura.server.packets.AvatarDataPacket;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 
-public class S2CAvatarDataPacketHandler extends ConnectedPacketHandler<AvatarDataPacket> {
+public class S2CAvatarDataPacketHandler extends ActivePacketHandler<AvatarDataPacket> {
     @Override
     protected void handlePacket(AvatarDataPacket packet) {
         FSB.instance().handleAvatarData(packet.streamId(), packet.avatarData(), packet.finalChunk());

@@ -19,10 +19,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
@@ -39,6 +36,7 @@ public abstract class FiguraServer {
     }
 
     private final HashMap<Identifier, C2SPacketHandler<?>> PACKET_HANDLERS = new HashMap<>() {{
+        put(C2SRequestVersion.PACKET_ID, new C2SVersionRequestHandler(FiguraServer.this));
         put(C2SBackendHandshakePacket.PACKET_ID, new C2SHandshakeHandler(FiguraServer.this));
         put(C2SFetchAvatarPacket.PACKET_ID, new C2SFetchAvatarPacketHandler(FiguraServer.this));
         put(C2SFetchUserdataPacket.PACKET_ID, new C2SFetchUserdataPacketHandler(FiguraServer.this));
@@ -56,6 +54,7 @@ public abstract class FiguraServer {
     }
 
     public static final List<Identifier> OUTCOMING_PACKETS = List.of(
+            S2CProtocolVersion.PACKET_ID,
             S2CBackendHandshakePacket.PACKET_ID,
             S2CInitializeAvatarStreamPacket.PACKET_ID,
             S2CNotifyPacket.PACKET_ID,
@@ -158,11 +157,14 @@ public abstract class FiguraServer {
     }
 
     public final S2CBackendHandshakePacket getHandshake() {
+        ArrayList<UUID> users = new ArrayList<>();
+        userManager.forEachUser(u -> users.add(u.uuid()));
         return new S2CBackendHandshakePacket(
                 config.pingsRateLimit(),
                 config.pingsSizeLimit(),
                 config.avatarSizeLimit(),
-                config.avatarsCountLimit()
+                config.avatarsCountLimit(),
+                users
         );
     }
 

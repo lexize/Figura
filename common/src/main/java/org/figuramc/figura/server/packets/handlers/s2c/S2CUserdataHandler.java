@@ -4,7 +4,7 @@ import org.figuramc.figura.backend2.FSB;
 import org.figuramc.figura.server.packets.s2c.S2CUserdataPacket;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 
-public class S2CUserdataHandler extends ConnectedPacketHandler<S2CUserdataPacket> {
+public class S2CUserdataHandler extends ActivePacketHandler<S2CUserdataPacket> {
     @Override
     protected void handlePacket(S2CUserdataPacket packet) {
         FSB.instance().handleUserdata(packet);

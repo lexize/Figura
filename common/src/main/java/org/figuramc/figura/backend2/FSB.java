@@ -16,29 +16,37 @@ import org.figuramc.figura.server.packets.CloseIncomingStreamPacket;
 import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.server.packets.c2s.*;
 import org.figuramc.figura.server.packets.s2c.S2CBackendHandshakePacket;
+import org.figuramc.figura.server.packets.s2c.S2CConnectedPacket;
 import org.figuramc.figura.server.packets.s2c.S2CPingPacket;
 import org.figuramc.figura.server.packets.s2c.S2CUserdataPacket;
 import org.figuramc.figura.server.utils.Hash;
 import com.mojang.datafixers.util.Pair;
+import org.figuramc.figura.server.utils.Result;
 import org.figuramc.figura.server.utils.StatusCode;
 import org.figuramc.figura.server.utils.Utils;
 import org.figuramc.figura.utils.FiguraText;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.util.*;
+import java.util.function.Consumer;
 
 public abstract class FSB {
+    private static final int MIN_PROTOCOL_VERSION_SUPPORTED = 0;
+
     private static FSB instance;
     private byte[] key;
     private S2CBackendHandshakePacket s2CHandshake;
-    private State state = State.Uninitialized;
-    private final HashMap<UUID, UserData> awaitingUserdata = new HashMap<>();
-    private int nextOutputId;
+    private State state = State.WaitingForProtocolVersion;
+    private final HashMap<Integer, Consumer<S2CUserdataPacket>> awaitingUserdata = new HashMap<>();
     private final HashMap<Integer, AvatarOutputStream> outputStreams = new HashMap<>();
-    private int nextInputId;
     private final HashMap<Integer, AvatarInputStream> inputStreams = new HashMap<>();
+    private final ArrayList<UUID> playersConnectedToFSB = new ArrayList<>();
+    private final ArrayList<UUID> fetchedByFSB = new ArrayList<>();
+    private int nextRequestId = 0;
+    private int serverProtocolVersion;
 
-    private int handshakeTick = 0;
+    private int initFetchTick = 0;
     private int handshakeAttempts = 0;
     private static final int HANDSHAKE_SEND_DELAY = 40;
     private static final int MAX_ATTEMPTS_TO_CONNECT = 10;
@@ -56,7 +64,7 @@ public abstract class FSB {
         return state;
     }
 
-    public boolean connected() {
+    public boolean active() {
         return s2CHandshake != null && state == State.Connected;
     }
 
@@ -75,6 +83,10 @@ public abstract class FSB {
             state = State.Connected;
             FiguraToast.sendToast(FiguraText.of("backend.fsb_connected"));
             AvatarManager.clearAllAvatars();
+            packet.forEachConnectedUser((user) -> {
+                if (!playersConnectedToFSB.contains(user))
+                    playersConnectedToFSB.add(user);
+            });
         }
     }
 
@@ -82,17 +94,75 @@ public abstract class FSB {
         state = State.Refused;
     }
 
-    public void getUser(UserData userData) {
-        awaitingUserdata.put(userData.id, userData);
-        sendPacket(new C2SFetchUserdataPacket(userData.id));
+    public void handleConnected(S2CConnectedPacket p) {
+        if (!playersConnectedToFSB.contains(p.user()))
+            playersConnectedToFSB.add(p.user());
+    }
+
+    public void handleVersion(int version) {
+        if (version < MIN_PROTOCOL_VERSION_SUPPORTED || version > Packet.PROTOCOL_VERSION) {
+            state = State.Incompatible;
+        }
+        else {
+            serverProtocolVersion = version;
+            state = State.Uninitialized;
+        }
+    }
+
+    public void handleUserdata(S2CUserdataPacket packet) {
+        Consumer<S2CUserdataPacket> handler = awaitingUserdata.get(packet.responseId());
+        if (handler != null) handler.accept(packet);
+    }
+
+    public void handleAllow(int stream) {
+        var outputStream = outputStreams.get(stream);
+        if (outputStream != null) {
+            outputStream.allow();
+        }
+    }
+
+    public void handleAvatarData(int streamId, byte[] chunk, boolean finalChunk) {
+        var inputStream = inputStreams.get(streamId);
+        if (inputStream == null) {
+            sendPacket(new CloseIncomingStreamPacket(streamId, StatusCode.INVALID_STREAM_ID));
+            return;
+        }
+        inputStream.acceptDataChunk(chunk, finalChunk);
+    }
+
+    public void handlePing(S2CPingPacket packet) {
+        Avatar avatar = AvatarManager.getLoadedAvatar(packet.sender());
+        if (avatar == null)
+            return;
+        avatar.runPing(packet.id(), packet.data());
+    }
+
+    private int getNextRequestId() {
+        int v = nextRequestId;
+        nextRequestId++;
+        return v;
+    }
+
+    public void getUserAndApply(UserData userData) {
+        getUser(userData.id, (packet) -> applyUserdata(userData, packet));
+    }
+
+    public void getUserAndApplyOffline(UserData userData) {
+        getUser(userData.id, (packet) -> applyUserdataOffline(userData, packet));
+    }
+
+    public void getUser(UUID uuid, Consumer<S2CUserdataPacket> handler) {
+        int id = getNextRequestId();
+        awaitingUserdata.put(id, handler);
+        sendPacket(new C2SFetchUserdataPacket(uuid, id));
     }
 
     public void uploadAvatar(String avatarId, byte[] avatarData) {
-        outputStreams.put(nextOutputId, new AvatarOutputStream(this, avatarId, nextOutputId, avatarData));
+        int id = getNextRequestId();
+        outputStreams.put(id, new AvatarOutputStream(this, avatarId, id, avatarData));
         Hash hash = Utils.getHash(avatarData);
         Hash ehash = getEHash(hash);
-        sendPacket(new C2SUploadAvatarPacket(nextOutputId, avatarId, hash, ehash));
-        nextOutputId++;
+        sendPacket(new C2SUploadAvatarPacket(id, avatarId, hash, ehash));
     }
 
     public void deleteAvatar(String avatarId) {
@@ -109,67 +179,87 @@ public abstract class FSB {
 
     public void onDisconnect() {
         s2CHandshake = null;
-        state = State.Uninitialized;
-        handshakeTick = 0;
+        state = State.WaitingForProtocolVersion;
+        initFetchTick = 0;
         handshakeAttempts = 0;
         inputStreams.clear();
         outputStreams.clear();
-        nextInputId = 0;
-        nextOutputId = 0;
-        // TODO: Handling disconnecting properly, closing all incoming/outcoming streams, etc.
+        playersConnectedToFSB.clear();
+        fetchedByFSB.clear();
+    }
+
+    public boolean connectedToFSB(UUID user) {
+        return playersConnectedToFSB.contains(user);
+    }
+
+    public boolean allowedToFetch(UUID user) {
+        return fetchedByFSB.contains(user);
     }
 
     public void tick() {
         if (!fsbAllowed()) return;
-        if (!connected()) {
-            if (state != State.Refused && handshakeAttempts < MAX_ATTEMPTS_TO_CONNECT) {
-                handshakeTick++;
-                if (handshakeTick == HANDSHAKE_SEND_DELAY) {
-                    sendPacket(new C2SBackendHandshakePacket());
-                    state = State.HandshakeSent;
-                    handshakeTick = 0;
-                    handshakeAttempts++;
+        if (!active()) {
+            if (handshakeAttempts < MAX_ATTEMPTS_TO_CONNECT) return;
+            if (state != State.Refused) {
+                initFetchTick++;
+                if (initFetchTick == HANDSHAKE_SEND_DELAY) {
+                    switch (state) {
+                        case WaitingForProtocolVersion -> sendPacket(new C2SRequestVersion());
+                        case Uninitialized, HandshakeSent -> {
+                            sendPacket(new C2SBackendHandshakePacket());
+                            state = State.HandshakeSent;
+                            handshakeAttempts++;
+                        }
+                    }
+                    initFetchTick = 0;
                 }
             }
         }
         else outputStreams.forEach((i, s) -> s.tick());
     }
 
-    public void getAvatar(UserData target, String hash) {
-        Hash h = Utils.parseHash(hash);
-        inputStreams.put(nextInputId, new AvatarInputStream(this, nextInputId, h, getEHash(h), target));
-        sendPacket(new C2SFetchAvatarPacket(nextInputId, h));
-        nextInputId++;
+    public void getAvatar(Hash hash, @Nullable Hash ehash, Consumer<Result<byte[]>> avatarDataConsumer) {
+        int id = getNextRequestId();
+        inputStreams.put(id, new AvatarInputStream(this, id, hash, ehash, avatarDataConsumer));
+        sendPacket(new C2SFetchAvatarPacket(id, hash));
     }
 
-    public void handleUserdata(S2CUserdataPacket packet) {
-        UserData user = awaitingUserdata.get(packet.target());
-        if (user != null) {
-            boolean isHost = FiguraMod.isLocal(user.id);
-            ArrayList<Pair<String, Pair<String, UUID>>> list = new ArrayList<>();
-            packet.avatars().forEach((id, hashPair) -> {
-                if (!isHost || getEHash(hashPair.hash()).equals(hashPair.ehash())) {
-                    list.add(new Pair<>(hashPair.hash().toString(), new Pair<>(id, user.id)));
-                }
-            });
-            user.loadData(list, new Pair<>(packet.prideBadges(), new BitSet()));
-            awaitingUserdata.remove(packet.target());
+    public void getAvatarAndApply(UserData target, String h) {
+        Hash hash = Utils.parseHash(h);
+        getAvatar(hash, FiguraMod.isLocal(target.id) ? getEHash(hash) : null, (data) -> applyAvatar(target, hash, data));
+    }
+
+    void applyAvatar(UserData target, Hash hash, Result<byte[]> data) {
+        try {
+            byte[] avatarData = data.get();
+            ByteArrayInputStream bais = new ByteArrayInputStream(avatarData);
+            CompoundTag tag = NbtIo.readCompressed(bais);
+            CacheAvatarLoader.save(hash.toString(), tag);
+            target.loadAvatar(tag);
+        } catch (Throwable e) {
+            FiguraMod.LOGGER.error("Failed to load avatar for " + target.id, e);
         }
     }
 
-    public void handleAvatarData(int streamId, byte[] chunk, boolean finalChunk) {
-        var inputStream = inputStreams.get(streamId);
-        if (inputStream == null) {
-            sendPacket(new CloseIncomingStreamPacket(streamId, StatusCode.INVALID_STREAM_ID));
-            return;
+    void applyUserdata(UserData user, S2CUserdataPacket packet) {
+        boolean isHost = FiguraMod.isLocal(user.id);
+        ArrayList<Pair<String, Pair<String, UUID>>> list = new ArrayList<>();
+        var id = packet.avatar().left();
+        var hashPair = packet.avatar().right();
+        if (!isHost || getEHash(hashPair.hash()).equals(hashPair.ehash())) {
+            list.add(new Pair<>(hashPair.hash().toString(), new Pair<>(id, user.id)));
         }
-        inputStream.acceptDataChunk(chunk, finalChunk);
+        user.loadData(list, new Pair<>(packet.prideBadges(), new BitSet()));
+        awaitingUserdata.remove(packet.responseId());
     }
 
-    public void handleAllow(int stream) {
-        var outputStream = outputStreams.get(stream);
-        if (outputStream != null) {
-            outputStream.allow();
+    void applyUserdataOffline(UserData user, S2CUserdataPacket packet) {
+        if (packet.loadFromFSBIfOffline()) {
+            applyUserdata(user, packet);
+        }
+        else {
+            fetchedByFSB.add(user.id);
+            AvatarManager.clearAvatars(user.id);
         }
     }
 
@@ -185,13 +275,6 @@ public abstract class FSB {
         if (outputStream != null) {
             outputStream.close(code);
         }
-    }
-
-    public void handlePing(S2CPingPacket packet) {
-        Avatar avatar = AvatarManager.getLoadedAvatar(packet.sender());
-        if (avatar == null)
-            return;
-        avatar.runPing(packet.id(), packet.data());
     }
 
     public abstract void sendPacket(Packet packet);
@@ -245,16 +328,16 @@ public abstract class FSB {
         private final int id;
         private final Hash hash;
         private final Hash ehash;
-        private final UserData target;
+        private final Consumer<Result<byte[]>> avatarDataConsumer;
         private final LinkedList<byte[]> dataChunks = new LinkedList<>();
         private int size = 0;
 
-        private AvatarInputStream(FSB parent, int id, Hash hash, Hash ehash, UserData target) {
+        private AvatarInputStream(FSB parent, int id, Hash hash, Hash ehash, Consumer<Result<byte[]>> avatarDataConsumer) {
             this.parent = parent;
             this.id = id;
             this.hash = hash;
             this.ehash = ehash;
-            this.target = target;
+            this.avatarDataConsumer = avatarDataConsumer;
         }
 
         private void acceptDataChunk(byte[] chunk, boolean finalChunk) {
@@ -271,18 +354,15 @@ public abstract class FSB {
                 if (!resultHash.equals(hash)) {
                     parent.sendPacket(new CloseIncomingStreamPacket(id, StatusCode.INVALID_HASH));
                 }
-                if (FiguraMod.isLocal(target.id) && !parent.getEHash(hash).equals(ehash)) {
+                if (ehash != null && !parent.getEHash(hash).equals(ehash)) {
                     parent.sendPacket(new CloseIncomingStreamPacket(id, StatusCode.OWNERSHIP_CHECK_ERROR));
                 }
 
                 try {
-                    ByteArrayInputStream bais = new ByteArrayInputStream(avatarData);
-                    CompoundTag tag = NbtIo.readCompressed(bais);
-                    CacheAvatarLoader.save(hash.toString(), tag);
-                    target.loadAvatar(tag);
+                    avatarDataConsumer.accept(new Result<>(avatarData));
                 }
                 catch (Exception e) {
-                    FiguraMod.LOGGER.error("Failed to load avatar for " + target.id, e);
+                    avatarDataConsumer.accept(new Result<>(e));
                 }
                 parent.inputStreams.remove(id);
             }
@@ -351,9 +431,11 @@ public abstract class FSB {
     }
 
     public enum State {
+        WaitingForProtocolVersion,
         Uninitialized,
         HandshakeSent,
         Connected,
-        Refused
+        Refused,
+        Incompatible
     }
 }

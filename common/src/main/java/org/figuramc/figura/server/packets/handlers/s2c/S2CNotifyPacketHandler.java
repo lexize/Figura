@@ -4,7 +4,7 @@ import org.figuramc.figura.avatar.AvatarManager;
 import org.figuramc.figura.server.packets.s2c.S2CNotifyPacket;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 
-public class S2CNotifyPacketHandler extends ConnectedPacketHandler<S2CNotifyPacket> {
+public class S2CNotifyPacketHandler extends ActivePacketHandler<S2CNotifyPacket> {
     @Override
     protected void handlePacket(S2CNotifyPacket packet) {
         AvatarManager.clearAvatars(packet.target());

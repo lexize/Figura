@@ -4,7 +4,7 @@ import org.figuramc.figura.backend2.FSB;
 import org.figuramc.figura.server.packets.AllowIncomingStreamPacket;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 
-public class AllowOutcomingStreamPacketHandler extends ConnectedPacketHandler<AllowIncomingStreamPacket> {
+public class AllowOutcomingStreamPacketHandler extends ActivePacketHandler<AllowIncomingStreamPacket> {
     @Override
     protected void handlePacket(AllowIncomingStreamPacket packet) {
         FSB.instance().handleAllow(packet.streamId());

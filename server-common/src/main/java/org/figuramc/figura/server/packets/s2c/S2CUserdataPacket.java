@@ -5,62 +5,63 @@ import org.figuramc.figura.server.packets.Packet;
 import org.figuramc.figura.server.utils.Hash;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.server.utils.Identifier;
+import org.figuramc.figura.server.utils.Pair;
 
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class S2CUserdataPacket implements Packet {
     public static final Identifier PACKET_ID = new Identifier("figura", "s2c/userdata");
 
-    private final UUID target;
+    private final int responseId;
     private final BitSet prideBadges;
-    private final HashMap<String, EHashPair> avatars;
+    private final Pair<String, EHashPair> equippedAvatar;
+    private final boolean loadFromFSBIfOffline;
 
-    public S2CUserdataPacket(UUID target, BitSet prideBadges, HashMap<String, EHashPair> avatars) {
-        this.target = target;
+    public S2CUserdataPacket(int responseId, BitSet prideBadges, Pair<String, EHashPair> avatar, boolean loadFromFSBIfOffline) {
+        this.responseId = responseId;
         this.prideBadges = prideBadges;
-        this.avatars = avatars;
+        this.equippedAvatar = avatar;
+        this.loadFromFSBIfOffline = loadFromFSBIfOffline;
     }
 
     public S2CUserdataPacket(IFriendlyByteBuf byteBuf) {
-        this.target = byteBuf.readUUID();
+        this.responseId = byteBuf.readInt();
         this.prideBadges = BitSet.valueOf(byteBuf.readByteArray(Integer.MAX_VALUE));
-        avatars = new HashMap<>();
-        int avatarsCount = byteBuf.readVarInt();
-        for (int i = 0; i < avatarsCount; i++) {
-            String avatarId = new String(byteBuf.readByteArray(Integer.MAX_VALUE), UTF_8);
-            Hash hash = byteBuf.readHash();
-            Hash ehash = byteBuf.readHash();
-            avatars.put(avatarId, new EHashPair(hash, ehash));
-        }
+        String avatarId = new String(byteBuf.readByteArray(Integer.MAX_VALUE), UTF_8);
+        Hash hash = byteBuf.readHash();
+        Hash ehash = byteBuf.readHash();
+        equippedAvatar = new Pair<>(avatarId, new EHashPair(hash, ehash));
+        loadFromFSBIfOffline = byteBuf.readByte() != 0;
     }
 
-    public UUID target() {
-        return target;
+    public int responseId() {
+        return responseId;
     }
 
     public BitSet prideBadges() {
         return prideBadges;
     }
 
-    public HashMap<String, EHashPair> avatars() {
-        return avatars;
+    public Pair<String, EHashPair> avatar() {
+        return equippedAvatar;
+    }
+
+    public boolean loadFromFSBIfOffline() {
+        return loadFromFSBIfOffline;
     }
 
     @Override
     public void write(IFriendlyByteBuf byteBuf) {
-        byteBuf.writeUUID(target);
+        byteBuf.writeInt(responseId);
         byteBuf.writeByteArray(prideBadges.toByteArray());
-        byteBuf.writeVarInt(avatars.size());
-        for (Map.Entry<String, EHashPair> avatar: avatars.entrySet()) {
-            byteBuf.writeByteArray(avatar.getKey().getBytes(UTF_8));
-            byteBuf.writeBytes(avatar.getValue().hash().get());
-            byteBuf.writeBytes(avatar.getValue().ehash().get());
-        }
+        byteBuf.writeByteArray(equippedAvatar.left().getBytes(UTF_8));
+        byteBuf.writeBytes(equippedAvatar.right().hash().get());
+        byteBuf.writeBytes(equippedAvatar.right().ehash().get());
+        byteBuf.writeByte(loadFromFSBIfOffline ? 1 : 0);
     }
 
     @Override

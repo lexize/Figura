@@ -8,6 +8,8 @@ import org.figuramc.figura.server.utils.Identifier;
 import java.util.HashMap;
 
 public interface Packet {
+    int PROTOCOL_VERSION = 0;
+
     void write(IFriendlyByteBuf buf);
     Identifier getId();
 
@@ -17,6 +19,7 @@ public interface Packet {
     }
 
     HashMap<Identifier, Deserializer> PACKETS = new HashMap<>() {{
+        put(C2SRequestVersion.PACKET_ID, (buf) -> new C2SRequestVersion());
         put(C2SBackendHandshakePacket.PACKET_ID, (buf) -> new C2SBackendHandshakePacket());
         put(C2SDeleteAvatarPacket.PACKET_ID, C2SDeleteAvatarPacket::new);
         put(C2SEquipAvatarsPacket.PACKET_ID, C2SEquipAvatarsPacket::new);
@@ -26,6 +29,7 @@ public interface Packet {
         put(C2SPingPacket.PACKET_ID, C2SPingPacket::new);
         put(C2SUploadAvatarPacket.PACKET_ID, C2SUploadAvatarPacket::new);
 
+        put(S2CProtocolVersion.PACKET_ID, S2CProtocolVersion::new);
         put(S2CRefusedPacket.PACKET_ID, (buf) -> new S2CRefusedPacket());
         put(S2CBackendHandshakePacket.PACKET_ID, S2CBackendHandshakePacket::new);
         put(S2CInitializeAvatarStreamPacket.PACKET_ID, S2CInitializeAvatarStreamPacket::new);
@@ -34,6 +38,7 @@ public interface Packet {
         put(S2CPingPacket.PACKET_ID, S2CPingPacket::new);
         put(S2CUserdataPacket.PACKET_ID, S2CUserdataPacket::new);
         put(S2CNotifyPacket.PACKET_ID, S2CNotifyPacket::new);
+        put(S2CConnectedPacket.PACKET_ID, S2CConnectedPacket::new);
 
         put(AllowIncomingStreamPacket.PACKET_ID, AllowIncomingStreamPacket::new);
         put(AvatarDataPacket.PACKET_ID, AvatarDataPacket::new);

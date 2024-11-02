@@ -53,8 +53,8 @@ public class S2CMessageHandler {
     }
 
     private static void ping(ByteBuffer bytes) {
-        if (FSB.instance().connected()) return;
         UUID uuid = new UUID(bytes.getLong(), bytes.getLong());
+        if (FSB.instance().connectedToFSB(uuid)) return;
 
         Avatar avatar = AvatarManager.getLoadedAvatar(uuid);
         if (avatar == null)
@@ -72,8 +72,8 @@ public class S2CMessageHandler {
     }
 
     private static void event(ByteBuffer bytes) {
-        if (FSB.instance().connected()) return;
         UUID uuid = new UUID(bytes.getLong(), bytes.getLong());
+        if (FSB.instance().connectedToFSB(uuid)) return;
         AvatarManager.reloadAvatar(uuid);
     }
 

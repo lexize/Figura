@@ -247,7 +247,7 @@ public class WardrobeScreen extends AbstractPanelScreen {
         // backend buttons
         Avatar avatar;
         upload.setActive(NetworkStuff.canUpload() && !AvatarManager.localUploaded && (avatar = AvatarManager.getAvatarForPlayer(FiguraMod.getLocalPlayerUUID())) != null && avatar.nbt != null && avatar.loaded);
-        delete.setActive((FSB.instance().connected() || NetworkStuff.isConnected()) && AvatarManager.localUploaded);
+        delete.setActive((FSB.instance().active() || NetworkStuff.isConnected()) && AvatarManager.localUploaded);
 
         updateMotdWidget();
     }

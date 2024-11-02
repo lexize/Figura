@@ -111,10 +111,9 @@ public class NetworkStuff {
         if (lastPing > 0 && FiguraMod.ticks - lastPing >= 20)
             lastPing = pingsSent = pingsReceived = 0;
 
-        if (!fsb().connected()) {
-            for (AvatarEquipInstruction instruction: AVATAR_EQUIP_INSTRUCTIONS) {
+        for (AvatarEquipInstruction instruction: AVATAR_EQUIP_INSTRUCTIONS) {
+            if (!fsb().connectedToFSB(instruction.avatar.id))
                 instruction.avatar.loadData(instruction.avatars(), instruction.bitPair());
-            }
         }
         AVATAR_EQUIP_INSTRUCTIONS.clear();
     }
@@ -303,9 +302,16 @@ public class NetworkStuff {
     }
 
     public static void getUser(UserData user) {
-        if (fsb().connected()) {
-            fsb().getUser(user);
-            return;
+        if (fsb().active()) {
+            if (FiguraMod.isInGame(user.id)) {
+                if (fsb().connectedToFSB(user.id)) {
+                    fsb().getUserAndApply(user);
+                    return;
+                }
+            }
+            else if (fsb().allowedToFetch(user.id)) {
+                fsb().getUserAndApplyOffline(user);
+            }
         }
 
         if (checkUUID(user.id)) {
@@ -376,7 +382,7 @@ public class NetworkStuff {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             NbtIo.writeCompressed(avatar.nbt, baos);
 
-            if (fsb().connected()) {
+            if (fsb().active()) {
                 fsb().uploadAvatar(id, baos.toByteArray());
                 return;
             }
@@ -386,7 +392,7 @@ public class NetworkStuff {
 
                 if (code == 200) {
                     //TODO - profile screen
-                    if (fsb().connected()) fsb().equipAvatar(List.of(Pair.of(id, getHash(baos.toByteArray()))));
+                    if (fsb().active()) fsb().equipAvatar(List.of(Pair.of(id, getHash(baos.toByteArray()))));
                     else equipAvatar(List.of(Pair.of(avatar.owner, id)));
                     AvatarManager.localUploaded = true;
                 }
@@ -409,7 +415,7 @@ public class NetworkStuff {
     public static void deleteAvatar(String avatar) {
         String id = avatar == null || true ? "avatar" : avatar; //TODO - profile screen
 
-        if (fsb().connected()) {
+        if (fsb().active()) {
             fsb().deleteAvatar(id);
             return;
         }
@@ -443,8 +449,8 @@ public class NetworkStuff {
     }
 
     public static void getAvatar(UserData target, UUID owner, String id, String hash) {
-        if (fsb().connected()) {
-            fsb().getAvatar(target, hash);
+        if (fsb().connectedToFSB(target.id)) {
+            fsb().getAvatarAndApply(target, hash);
         }
 
         if (checkUUID(target.id)) {
@@ -465,7 +471,7 @@ public class NetworkStuff {
                 return;
 
             //success
-            if (fsb().connected()) return;
+            if (fsb().active()) return;
             try {
                 CompoundTag nbt = NbtIo.readCompressed(stream);
                 CacheAvatarLoader.save(hash, nbt);
@@ -505,7 +511,7 @@ public class NetworkStuff {
             return;
 
         try {
-            if (!fsb().connected()) {
+            if (!fsb().active()) {
                 ByteBuffer buffer = C2SMessageHandler.ping(id, sync, data);
                 ws.sendBinary(buffer.array());
             }
@@ -588,11 +594,11 @@ public class NetworkStuff {
     }
 
     public static boolean canUpload() {
-        return fsb().connected() || isConnected() && uploadRate.check();
+        return fsb().active() || isConnected() && uploadRate.check();
     }
 
     public static int getSizeLimit() {
-        return fsb().connected() ? fsb().handshake().maxAvatarSize() : isConnected() ? maxAvatarSize : Integer.MAX_VALUE;
+        return fsb().active() ? fsb().handshake().maxAvatarSize() : isConnected() ? maxAvatarSize : Integer.MAX_VALUE;
     }
 
 

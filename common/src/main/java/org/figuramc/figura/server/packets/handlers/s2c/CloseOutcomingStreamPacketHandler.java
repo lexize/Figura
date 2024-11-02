@@ -4,7 +4,7 @@ import org.figuramc.figura.backend2.FSB;
 import org.figuramc.figura.server.packets.CloseOutcomingStreamPacket;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 
-public class CloseOutcomingStreamPacketHandler extends ConnectedPacketHandler<CloseOutcomingStreamPacket> {
+public class CloseOutcomingStreamPacketHandler extends ActivePacketHandler<CloseOutcomingStreamPacket> {
     @Override
     protected void handlePacket(CloseOutcomingStreamPacket packet) {
         FSB.instance().closeOutcomingStreamPacket(packet.streamId(), packet.code());

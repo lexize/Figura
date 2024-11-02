@@ -73,7 +73,7 @@ public class StatusWidget implements FiguraWidget, FiguraTickable, GuiEventListe
         script = empty ? 0 : avatar.scriptError ? 1 : avatar.luaRuntime == null ? 0 : avatar.versionStatus > 0 ? 2 : 3;
         scriptError = script == 1 ? avatar.errorText.copy() : null;
 
-        backend = FSB.instance().connected() ? 4 : NetworkStuff.backendStatus;
+        backend = FSB.instance().active() ? 4 : NetworkStuff.backendStatus;
 
         String dc = NetworkStuff.disconnectedReason;
         disconnectedReason = backend == 1 && dc != null && !dc.isBlank() ? Component.literal(dc) : null;

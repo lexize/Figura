@@ -3,12 +3,9 @@ package org.figuramc.figura.server;
 import org.figuramc.figura.server.events.Events;
 import org.figuramc.figura.server.events.users.LoadPlayerDataEvent;
 import org.figuramc.figura.server.events.users.SavePlayerDataEvent;
-import org.figuramc.figura.server.events.users.UserLoadingExceptionEvent;
-import org.figuramc.figura.server.utils.Either;
 
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -42,7 +39,7 @@ public final class FiguraUserManager {
         LoadPlayerDataEvent playerDataEvent = Events.call(new LoadPlayerDataEvent(player));
         if (playerDataEvent.returned()) return playerDataEvent.returnValue();
         Path dataFile = parent.getUserdataFile(player);
-        return FiguraUser.load(player, dataFile);
+        return FiguraUser.loadFromByteBuf(player, dataFile);
     }
 
     public void forEachUser(Consumer<FiguraUser> func) {
@@ -56,7 +53,7 @@ public final class FiguraUserManager {
     public void onUserLeave(UUID player) {
         users.computeIfPresent(player, (uuid, pl) -> {
             if (!Events.call(new SavePlayerDataEvent(pl)).isCancelled())
-                pl.save(parent.getUserdataFile(pl.uuid()));
+                pl.saveToByteBuf(parent.getUserdataFile(pl.uuid()));
             pl.setOffline();
             return pl;
         });
@@ -65,7 +62,7 @@ public final class FiguraUserManager {
     public void close() {
         for (var user: users.values()) {
             if (!Events.call(new SavePlayerDataEvent(user)).isCancelled())
-                user.save(parent.getUserdataFile(user.uuid()));
+                user.saveToByteBuf(parent.getUserdataFile(user.uuid()));
         }
         users.clear();
     }

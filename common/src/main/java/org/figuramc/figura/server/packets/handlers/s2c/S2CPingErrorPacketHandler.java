@@ -5,7 +5,7 @@ import org.figuramc.figura.server.packets.s2c.S2CPingErrorPacket;
 import org.figuramc.figura.server.utils.IFriendlyByteBuf;
 import org.figuramc.figura.utils.FiguraText;
 
-public class S2CPingErrorPacketHandler extends ConnectedPacketHandler<S2CPingErrorPacket> {
+public class S2CPingErrorPacketHandler extends ActivePacketHandler<S2CPingErrorPacket> {
     @Override
     protected void handlePacket(S2CPingErrorPacket packet) {
         switch (packet.error()) {
