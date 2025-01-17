@@ -10,6 +10,11 @@ repositories {
     flatDir {
         dirs "$rootProject.projectDir/libs"
     }
+    maven {
+        name "KosmX's maven"
+        url 'https://maven.kosmx.dev/'
+    }
+
 }
 
 configurations {
@@ -34,13 +39,13 @@ dependencies {
     modCompileOnly ("software.bernie.geckolib:geckolib-fabric-$geckolib_version") {
         exclude group: "net.fabricmc"
     }
-
+    include modImplementation("dev.kosmx.player-anim:anim-core:${project.player_anim}")
+    include modImplementation("dev.kosmx.player-anim:player-animation-lib:${project.player_anim}")
     implementation(annotationProcessor("io.github.llamalad7:mixinextras-common:0.3.6"))
 
     // We depend on fabric loader here to use the fabric @Environment annotations and get the mixin dependencies
     // Do NOT use other classes from fabric loader
     modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
-
     // Test compile only is used to mount sources on an IDE without overriding vanilla classes with Optifine's
     testCompileOnly fileTree(dir: "$rootProject.projectDir/libs", include: '*.jar')
 

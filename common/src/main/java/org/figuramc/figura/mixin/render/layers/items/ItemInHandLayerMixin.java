@@ -2,6 +2,10 @@ package org.figuramc.figura.mixin.render.layers.items;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import dev.kosmx.playerAnim.api.TransformType;
+import dev.kosmx.playerAnim.core.impl.AnimationProcessor;
+import dev.kosmx.playerAnim.core.util.Vec3f;
+import dev.kosmx.playerAnim.impl.IAnimatedPlayer;
 import net.minecraft.client.model.ArmedModel;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.ItemInHandRenderer;
@@ -31,7 +35,9 @@ public abstract class ItemInHandLayerMixin<T extends LivingEntity, M extends Ent
         super(renderLayerParent);
     }
 
-    @Shadow @Final private ItemInHandRenderer itemInHandRenderer;
+    @Shadow
+    @Final
+    private ItemInHandRenderer itemInHandRenderer;
 
     @Inject(method = "renderArmWithItem", at = @At("HEAD"), cancellable = true)
     protected void renderArmWithItem(LivingEntity livingEntity, ItemStack itemStack, ItemDisplayContext itemDisplayContext, HumanoidArm humanoidArm, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, CallbackInfo ci) {
@@ -49,6 +55,23 @@ public abstract class ItemInHandLayerMixin<T extends LivingEntity, M extends Ent
             final float s = 16f;
             stack.scale(s, s, s);
             stack.mulPose(Axis.XP.rotationDegrees(-90f));
+
+            // Histy's PlayerAnimator Support for Bettercombat TODO: Make optional before calling
+            if(livingEntity instanceof IAnimatedPlayer player) {
+                if (player.playerAnimator_getAnimation().isActive()) {
+                    AnimationProcessor anim = player.playerAnimator_getAnimation();
+
+                    Vec3f rot = anim.get3DTransform(left ? "leftItem" : "rightItem", TransformType.ROTATION, Vec3f.ZERO);
+                    Vec3f pos = anim.get3DTransform(left ? "leftItem" : "rightItem", TransformType.POSITION, Vec3f.ZERO).scale(1/16f);
+
+                    stack.translate(pos.getX(), pos.getY(), pos.getZ());
+
+                    stack.mulPose(Axis.ZP.rotation(rot.getZ()));    //roll
+                    stack.mulPose(Axis.YP.rotation(rot.getY()));    //pitch
+                    stack.mulPose(Axis.XP.rotation(rot.getX()));    //yaw
+                }
+            }
+            //end histy's changes
             this.itemInHandRenderer.renderItem(livingEntity, itemStack, itemDisplayContext, left, stack, multiBufferSource, i);
         })) {
             ci.cancel();
